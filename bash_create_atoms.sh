@@ -7,8 +7,8 @@ export PROJECT_ID=$(gcloud config list project --format "value(core.project)")
 # --train-files /NumeraiData/Numerai_test/sample_data.csv
 
 # Logistic Regression
-export IMAGE_REPO_NAME=classification_sklearn_logisticRegression
-export IMAGE_TAG=class_skl_logReg
+export IMAGE_REPO_NAME=classification_sklearn_logisticregression
+export IMAGE_TAG=class_skl_logreg
 export IMAGE_URI=gcr.io/$PROJECT_ID/$IMAGE_REPO_NAME:$IMAGE_TAG
 
 docker build -f docker_logisticRegression_classifier -t $IMAGE_URI ./
