@@ -25,7 +25,7 @@ RUN pip install scikit-learn==0.20.2 && \
 ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
 
 # Copies the trainer code
-COPY LogisticRegression.py /root/mlatoms/entrypoint_logisticRegression_classifier.py
+COPY entrypoint_logisticRegression_classifier.py /root/mlatoms/entrypoint_logisticRegression_classifier.py
 COPY trainer.py /root/mlatoms/trainer.py
 
 # Sets up the entry point to invoke the trainer.

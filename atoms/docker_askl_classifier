@@ -29,7 +29,7 @@ RUN apt-get update && \
 ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
 
 # Copies the trainer code
-COPY askl_classifier.py /root/mlatoms/entrypoint_askl_classifier.py
+COPY entrypoint_askl_classifier.py /root/mlatoms/entrypoint_askl_classifier.py
 COPY trainer.py /root/mlatoms/trainer.py
 
 # Sets up the entry point to invoke the trainer.
