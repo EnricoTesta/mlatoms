@@ -1,0 +1,49 @@
+# Copyright 2019 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the \"License\");
+# you may not use this file except in compliance with the License.\n",
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an \"AS IS\" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Dockerfile
+FROM python:3
+WORKDIR /root
+
+# Installs google cloud sdk, this is mostly for using gsutil to export model.
+RUN apt-get update && \
+    apt-get install -y cmake build-essential gcc g++ git wget && \
+    pip install scikit-learn==0.20.2 pandas==0.23.4 && \
+    pip install cloudml-hypertune && \
+    pip3 install xgboost==0.81 && \
+    wget -nv \
+    https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz && \
+    mkdir /root/tools && \
+    tar xvzf google-cloud-sdk.tar.gz -C /root/tools && \
+    rm google-cloud-sdk.tar.gz && \
+    /root/tools/google-cloud-sdk/install.sh --usage-reporting=false \
+        --path-update=false --bash-completion=false \
+        --disable-installation-options && \
+    rm -rf /root/.config/* && \
+    ln -s /root/.config /config && \
+    # Remove the backup directory that gcloud creates
+    rm -rf /root/tools/google-cloud-sdk/.install/.backup && \
+    echo '[GoogleCompute]\nservice_account = default' > /etc/boto.cfg && \
+    mkdir /root/mlatoms && \
+    apt-get autoremove -y && apt-get clean
+
+# Path configuration
+ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
+
+# Copies the trainer code
+COPY xgb_classifier.py /root/mlatoms/xgb_classifier.py
+COPY trainer.py /root/mlatoms/trainer.py
+
+# Sets up the entry point to invoke the trainer.
+ENTRYPOINT ["python3", "mlatoms/xgb_classifier.py"]
