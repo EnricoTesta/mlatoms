@@ -13,8 +13,6 @@ export IMAGE_URI=gcr.io/$PROJECT_ID/$IMAGE_REPO_NAME:$IMAGE_TAG
 
 docker build -f docker_logisticRegression_classifier -t $IMAGE_URI ./
 
-docker run $IMAGE_URI --C 1 --penalty l2
-
 docker push $IMAGE_URI
 
 
@@ -26,8 +24,6 @@ export IMAGE_URI=gcr.io/$PROJECT_ID/$IMAGE_REPO_NAME:$IMAGE_TAG
 
 docker build -f docker_lgbm_classifier -t $IMAGE_URI ./
 
-docker run $IMAGE_URI --n_estimators 10 --max_depth 2 --debug 1
-
 docker push $IMAGE_URI
 
 
@@ -37,9 +33,7 @@ export IMAGE_REPO_NAME=classification_xgboost
 export IMAGE_TAG=class_xgb
 export IMAGE_URI=gcr.io/$PROJECT_ID/$IMAGE_REPO_NAME:$IMAGE_TAG
 
-docker build -f docker_xbg_classifier -t $IMAGE_URI ./
-
-docker run $IMAGE_URI --n_estimators 10 --max_depth 2 --debug 1
+docker build -f docker_xgb_classifier -t $IMAGE_URI ./
 
 docker push $IMAGE_URI
 
@@ -50,9 +44,7 @@ export IMAGE_REPO_NAME=classification_autosklearn
 export IMAGE_TAG=class_askl
 export IMAGE_URI=gcr.io/$PROJECT_ID/$IMAGE_REPO_NAME:$IMAGE_TAG
 
-docker build -f askl_classifier_DockerFile -t $IMAGE_URI ./
-
-docker run $IMAGE_URI --debug 1
+docker build -f docker_askl_classifier -t $IMAGE_URI ./
 
 docker push $IMAGE_URI
 
