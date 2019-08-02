@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 cd atoms
 #TODO: rename image URIs and check whether docker run is successful or not.
 export PATH=~/google-cloud-sdk/bin:$PATH
