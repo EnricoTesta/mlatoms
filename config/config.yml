@@ -3,22 +3,22 @@ BUCKET: 'ml_train_deploy_test'
 CONTAINER_ROOT_URL: 'gcr.io/'
 ATOMS:
   askl_classifier:
-    docker: 'docker_askl_classifier'
+    docker_file: 'docker_askl_classifier'
     docker_entrypoint: 'entrypoint_askl_classifier.py'
     image_name: 'classification_autosklearn'
     image_tag: 'class_askl'
   lgbm_classifier:
-    docker: 'docker_lgbm_classifier'
+    docker_file: 'docker_lgbm_classifier'
     docker_entrypoint: 'entrypoint_lgbm_classifier.py'
     image_name: 'classification_lgbm'
     image_tag: 'class_lgbm'
   logisticRegression_classifier:
-    docker: 'docker_logisticRegression_classifier'
+    docker_file: 'docker_logisticRegression_classifier'
     docker_entrypoint: 'entrypoint_logisticRegression_classifier.py'
     image_name: 'classification_sklearn_logisticregression'
     image_tag: 'class_skl_logreg'
   xgb_classifier:
-    docker: 'docker_xgb_classifier'
+    docker_file: 'docker_xgb_classifier'
     docker_entrypoint: 'entrypoint_xgb_classifier.py'
     image_name: 'classification_xgboost'
     image_tag: 'class_xgb'
