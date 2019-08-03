@@ -14,6 +14,6 @@ def get_image_uri(atom_name, deployment="GCP"):
     project_id = deploy_config[deployment]['PROJECT_ID']
     image_name = config['ATOMS'][atom_name]['image_name']
     image_tag = config['ATOMS'][atom_name]['image_tag']
-    uri = deploy_config[deployment]['CONTAINER_ROOT_URL'] + project_id + "/" + image_name + ":" + image_tag
+    uri = deploy_config[deployment]['CONTAINER_ROOT_URL'] + "/" + project_id + "/" + image_name + ":" + image_tag
 
     return uri

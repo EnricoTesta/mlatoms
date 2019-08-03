@@ -1,6 +1,6 @@
 from yaml import safe_load
 from utils.docker_utils import get_image_uri
-from utils.gcp_utils import get_docker_bridge_service_account
+from utils.gcp_utils import get_container_registry_service_account_json, get_registry_hostname
 from subprocess import check_call, CalledProcessError
 import os
 
@@ -10,7 +10,9 @@ with open(os.getcwd() + "/config/atoms.yml", 'r') as stream:
 
 # Get permission to push to registry
 try:
-    check_call("sudo usermod -a -G docker " + get_docker_bridge_service_account())
+    cmd = ["cat " + get_container_registry_service_account_json() +
+           " | docker login -u _json_key --password-stdin https://", get_registry_hostname()]
+    check_call(' '.join(cmd))
 except CalledProcessError as e:
     print("Failed to obtain access rights to repository. Subprocess return code is %s" % e.returncode)
     print("Aborting...")
