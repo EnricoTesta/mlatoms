@@ -20,8 +20,8 @@ try:
     cmd = "cat " + get_container_registry_service_account_json() + \
           " | docker login -u _json_key --password-stdin https://" + get_registry_hostname()
 
-    cmd_2 = 'docker login -u _json_key -p /"$(cat ' + get_container_registry_service_account_json() + \
-            ')/" https://' + get_registry_hostname()
+    cmd_2 = 'docker login -u _json_key -p \"$(cat ' + get_container_registry_service_account_json() + \
+            ')\" https://' + get_registry_hostname()
 
     print("")
     print(cmd_2)
