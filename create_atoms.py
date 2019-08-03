@@ -23,6 +23,9 @@ for key in data['ATOMS'].keys():
 
     # Execute command
     try:
+        print("")
+        print(' && '.join(cmd))
+        print("")
         check_call(' && '.join(cmd), shell=True)
         successful_builds.append(key)
     except CalledProcessError as e:
