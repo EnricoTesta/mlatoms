@@ -10,6 +10,7 @@ with open(os.getcwd() + "/config/atoms.yml", 'r') as stream:
 
 # Get permission to push to registry
 try:
+    pass
     #cmd = "cat " + get_container_registry_service_account_json() + \
     #      " | docker login -u _json_key --password-stdin https://" + get_registry_hostname()
     #check_call(cmd)
