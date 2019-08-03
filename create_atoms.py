@@ -18,7 +18,7 @@ for key in data['ATOMS'].keys():
            "export PROJECT_ID=$(gcloud config list project --format \"value(core.project)\")",
            "export IMAGE_REPO_NAME=" + data['ATOMS'][key]['image_name'],
            "export IMAGE_TAG=" + data['ATOMS'][key]['image_tag'],
-           "export IMAGE_URI=" + data['CONTAINER_ROOT_URL'] + "$PROJECT_ID/$IMAGE_REPO_NAME:$IMAGE_TAG"
+           "export IMAGE_URI=" + data['CONTAINER_ROOT_URL'] + "$PROJECT_ID/$IMAGE_REPO_NAME:$IMAGE_TAG",
            "sudo docker build -f " + data['ATOMS'][key]['docker'] + " -t $IMAGE_URI ./"]
 
     # Execute command
