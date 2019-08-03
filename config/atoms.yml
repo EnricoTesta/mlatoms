@@ -1,6 +1,3 @@
-PROJECT_ID: 'num-00'
-BUCKET: 'ml_train_deploy_test'
-CONTAINER_ROOT_URL: 'gcr.io/'
 ATOMS:
   askl_classifier:
     docker_file: 'docker_askl_classifier'

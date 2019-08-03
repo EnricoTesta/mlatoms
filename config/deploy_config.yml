@@ -1,0 +1,5 @@
+GCP:
+  PROJECT_ID: 'num-00'
+  BUCKET: 'ml_train_deploy_test'
+  CONTAINER_ROOT_URL: 'gcr.io/'
+  DOCKER_BRIDGE_SERVICE_ACCOUNT: '291041105101-compute'
