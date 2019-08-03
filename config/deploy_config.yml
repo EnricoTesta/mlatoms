@@ -2,4 +2,4 @@ GCP:
   PROJECT_ID: 'num-00'
   BUCKET: 'ml_train_deploy_test'
   CONTAINER_ROOT_URL: 'gcr.io'
-  CONTAINER_REGISTRY_SERVICE_ACCOUNT_JSON: '~/mlatoms/deploy/container_registry_ref_file.json'
+  CONTAINER_REGISTRY_SERVICE_ACCOUNT_JSON: '/home/x20260439/mlatoms/deploy/container_registry_ref_file.json'

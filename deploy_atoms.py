@@ -10,7 +10,13 @@ with open(os.getcwd() + "/config/atoms.yml", 'r') as stream:
 
 # Get permission to push to registry
 try:
-    pass
+    # This was successful when sent manually
+    "cat ~/mlatoms/deploy/container_registry_ref_file.json | docker login -u _json_key --password-stdin https://gcr.io"
+
+    # If you try to do it again it says
+    "docker login requires at most 1 argument"
+
+
     cmd = "cat " + get_container_registry_service_account_json() + \
           " | docker login -u _json_key --password-stdin https://" + get_registry_hostname()
     print("")
