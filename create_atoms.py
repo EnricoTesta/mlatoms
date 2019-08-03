@@ -4,7 +4,7 @@ from subprocess import check_call, CalledProcessError
 import os
 
 # Read configuration file
-with open(os.getcwd() + "/config/config.yml", 'r') as stream:
+with open(os.getcwd() + "/config/atoms.yml", 'r') as stream:
     data = safe_load(stream)
 
 successful_builds = []

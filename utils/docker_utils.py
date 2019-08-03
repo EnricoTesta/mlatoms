@@ -5,7 +5,7 @@ import os
 def get_image_uri(atom_name):
 
     # Read configuration file
-    with open(os.getcwd() + "/config/config.yml", 'r') as stream:
+    with open(os.getcwd() + "/config/atoms.yml", 'r') as stream:
         config = safe_load(stream)
 
     # Fetch URI
