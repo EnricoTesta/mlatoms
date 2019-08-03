@@ -26,9 +26,6 @@ for atom in data['ATOMS'].keys():
         print("Failed to execute subprocess for container %s. Return code is %s." % (atom, e.returncode))
         failed_pushes.append(atom)
 
-    # TODO: Test atom locally on sample data
-    pass
-
 # Summary
 print("")
 print("")
