@@ -8,6 +8,7 @@ import os
 with open(os.getcwd() + "/config/atoms.yml", 'r') as stream:
     data = safe_load(stream)
 
+# TODO: fix permission command to push containers automatically to container registry. Currently must push manually.
 # Get permission to push to registry
 try:
     # This was successful when sent manually
