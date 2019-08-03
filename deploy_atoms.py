@@ -16,7 +16,7 @@ for atom in data['ATOMS'].keys():
 
     # Build shell command
     cmd = ["cd atoms",
-           "sudo push " + get_image_uri(atom)]
+           "sudo docker push " + get_image_uri(atom)]
 
     # Execute command
     try:
