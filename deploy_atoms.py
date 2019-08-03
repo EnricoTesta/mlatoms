@@ -31,7 +31,7 @@ for atom in data['ATOMS'].keys():
 
     # Execute command
     try:
-        check_call(' && '.join(cmd), shell=True)
+        check_call(cmd, shell=True)
         successful_pushes.append(atom)
     except CalledProcessError as e:
         print("Failed to execute subprocess for container %s. Return code is %s." % (atom, e.returncode))
