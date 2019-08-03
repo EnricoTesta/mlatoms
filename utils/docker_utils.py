@@ -2,16 +2,18 @@ from yaml import safe_load
 import os
 
 
-def get_image_uri(atom_name):
+def get_image_uri(atom_name, deployment="GCP"):
 
-    # Read configuration file
+    # Read configuration files
     with open(os.getcwd() + "/config/atoms.yml", 'r') as stream:
         config = safe_load(stream)
+    with open(os.getcwd() + "/config/deploy_config.yml", 'r') as stream:
+        deploy_config = safe_load(stream)
 
     # Fetch URI
-    project_id = config['PROJECT_ID']
+    project_id = deploy_config[deployment]['PROJECT_ID']
     image_name = config['ATOMS'][atom_name]['image_name']
     image_tag = config['ATOMS'][atom_name]['image_tag']
-    uri = config['CONTAINER_ROOT_URL'] + project_id + "/" + image_name + ":" + image_tag
+    uri = deploy_config[deployment]['CONTAINER_ROOT_URL'] + project_id + "/" + image_name + ":" + image_tag
 
     return uri
