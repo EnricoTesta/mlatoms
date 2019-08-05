@@ -100,10 +100,12 @@ class Trainer:
         if self._debug:
             x, y = load_breast_cancer(return_X_y=True)
         else:
-            local_file_path = os.path.join("/tmp/", "train_data.csv")
-            subprocess.check_call(['gsutil', 'cp', self.train_data_path, local_file_path])
-
-            train_data = read_csv(local_file_path)  # by convention the first column is always the target
+            try:
+                local_file_path = os.path.join("/tmp/", "train_data.csv")
+                subprocess.check_call(['gsutil', 'cp', self.train_data_path, local_file_path])
+                train_data = read_csv(local_file_path)  # by convention the first column is always the target
+            except FileNotFoundError:
+                train_data = read_csv(self.train_data_path)
             y = train_data.iloc[:, 0]
             x = train_data.iloc[:, 1:]
 
