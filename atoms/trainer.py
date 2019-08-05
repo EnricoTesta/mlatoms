@@ -20,8 +20,6 @@ from datetime import datetime as dt
 from pickle import dump
 from pandas import read_csv, DataFrame
 from sklearn.model_selection import cross_validate, cross_val_predict
-from sklearn.datasets import load_breast_cancer
-# from sklearn.externals import joblib
 
 
 CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier', 'XGBClassifier', 'AutoSklearnClassifier']
@@ -155,7 +153,7 @@ class Trainer:
                 ['gsutil', 'cp', tmp_predictions_file, os.path.join(self.model_path, predictions_file_name)])
 
         # Step 6 - Report Loss to Hypertune
-        if self.hypertune_loss is not None and not self._debug:
+        if self.hypertune_loss is not None:
             hpt = hypertune.HyperTune()
             hpt.report_hyperparameter_tuning_metric(
                 hyperparameter_metric_tag=self.hypertune_loss,
