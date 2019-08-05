@@ -23,12 +23,12 @@ def get_args():
         help='Used to specify the norm used in the penalization')
     parser.add_argument(
         '--model-dir',
-        default=None,
+        default='/mlatoms/test/modeldir',
         metavar='model_dir',
         help='The directory to store the model')
     parser.add_argument(
         '--train-files',
-        default=None,
+        default='/mlatoms/data/binary_classification_numeric_sample_data.csv',
         metavar='train_files',
         help='The directory to fetch train data')
 
@@ -42,10 +42,10 @@ def main():
     args_dict = vars(args)
 
     # Make param dict
-    param_dict = {}
+    param_dict = {'algo': {}, 'fit': {}}
     for item in args_dict:
         if item not in ('model_dir', 'train_files'):
-            param_dict[item] = args_dict[item]
+            param_dict['algo'][item] = args_dict[item]
 
     t = Trainer(train_data_path=args.train_files, model_path=args.model_dir, algo=LogisticRegression,
                 params=param_dict, hypertune_loss='accuracy')
