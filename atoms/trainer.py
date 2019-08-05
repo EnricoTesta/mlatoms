@@ -32,10 +32,9 @@ class Trainer:
     """How do I know what trials I'm in??? It would be of great help in using HyperTune and setting model name.
     --> Can be found in TrainingOutput..."""
 
-    def __init__(self, train_data_path=None, model_path=None, algo=None, params=None, hypertune_loss=None, debug=False):
+    def __init__(self, train_data_path=None, model_path=None, algo=None, params=None, hypertune_loss=None):
         # Input information
-        self._debug = debug
-        if not self._debug and (train_data_path is None or model_path is None):
+        if train_data_path is None or model_path is None:
             raise ValueError("Must set train_data_path and model_path")
 
         self.train_data_path = train_data_path
@@ -97,17 +96,14 @@ class Trainer:
     def run(self):
 
         # Step 1 - Read data
-        if self._debug:
-            x, y = load_breast_cancer(return_X_y=True)
-        else:
-            try:
-                local_file_path = os.path.join("/tmp/", "train_data.csv")
-                subprocess.check_call(['gsutil', 'cp', self.train_data_path, local_file_path])
-                train_data = read_csv(local_file_path)  # by convention the first column is always the target
-            except FileNotFoundError:
-                train_data = read_csv(self.train_data_path)
-            y = train_data.iloc[:, 0]
-            x = train_data.iloc[:, 1:]
+        try:
+            local_file_path = os.path.join("/tmp/", "train_data.csv")
+            subprocess.check_call(['gsutil', 'cp', self.train_data_path, local_file_path])
+            train_data = read_csv(local_file_path)  # by convention the first column is always the target
+        except FileNotFoundError:
+            train_data = read_csv(self.train_data_path)  # for debug
+        y = train_data.iloc[:, 0]
+        x = train_data.iloc[:, 1:]
 
         # Step 2 - Cross Validation generalization assessment
         # TODO: define a CV strategy
@@ -130,41 +126,33 @@ class Trainer:
         model_file_name = 'model_' + unique_id + '.pkl'
         validation_file_name = 'info_' + unique_id + '.csv'
         predictions_file_name = 'predictions_' + unique_id + '.csv'
-        if self._debug:
-            destination = os.getcwd()
-            print("Debug destination directory: %s" % destination)
-            with open(destination + "/" + model_file_name, 'wb') as f:
-                dump(self.trained_model, f)
-            if self.validation is not None:
-                DataFrame.from_dict(self.validation).to_csv(destination + "/" + validation_file_name, index=False)
-            if self.predictions is not None:
-                DataFrame(self.predictions).to_csv(destination + "/" + predictions_file_name, index=False)
+
+        # TODO: implement debug mode for this part
+
+        # Export Trained Model
+        tmp_model_file = os.path.join('/tmp/', model_file_name)
+        with open(tmp_model_file, 'wb') as f:
+            # joblib.dump(self.trained_model, f)
+            dump(self.trained_model, f)
+        subprocess.check_call(['gsutil', 'cp', tmp_model_file, os.path.join(self.model_path, model_file_name)])
+
+        # Export generalization assessment
+        if self.validation is None:
+            pass
         else:
+            tmp_validation_file = os.path.join('/tmp/', validation_file_name)
+            DataFrame.from_dict(self.validation).to_csv(tmp_validation_file, index=False)
+            subprocess.check_call(['gsutil', 'cp', tmp_validation_file,
+                                   os.path.join(self.model_path, validation_file_name)])
 
-            # Export Trained Model
-            tmp_model_file = os.path.join('/tmp/', model_file_name)
-            with open(tmp_model_file, 'wb') as f:
-                # joblib.dump(self.trained_model, f)
-                dump(self.trained_model, f)
-            subprocess.check_call(['gsutil', 'cp', tmp_model_file, os.path.join(self.model_path, model_file_name)])
-
-            # Export generalization assessment
-            if self.validation is None:
-                pass
-            else:
-                tmp_validation_file = os.path.join('/tmp/', validation_file_name)
-                DataFrame.from_dict(self.validation).to_csv(tmp_validation_file, index=False)
-                subprocess.check_call(['gsutil', 'cp', tmp_validation_file,
-                                       os.path.join(self.model_path, validation_file_name)])
-
-            # Export predictions
-            if self.predictions is None:
-                pass
-            else:
-                tmp_predictions_file = os.path.join('/tmp/', predictions_file_name)
-                DataFrame(self.predictions).to_csv(tmp_predictions_file, index=False)
-                subprocess.check_call(
-                    ['gsutil', 'cp', tmp_predictions_file, os.path.join(self.model_path, predictions_file_name)])
+        # Export predictions
+        if self.predictions is None:
+            pass
+        else:
+            tmp_predictions_file = os.path.join('/tmp/', predictions_file_name)
+            DataFrame(self.predictions).to_csv(tmp_predictions_file, index=False)
+            subprocess.check_call(
+                ['gsutil', 'cp', tmp_predictions_file, os.path.join(self.model_path, predictions_file_name)])
 
         # Step 6 - Report Loss to Hypertune
         if self.hypertune_loss is not None and not self._debug:
