@@ -153,8 +153,9 @@ class Trainer:
                 ['gsutil', 'cp', tmp_predictions_file, os.path.join(self.model_path, predictions_file_name)])
 
         # Step 6 - Report Loss to Hypertune
-        if self.hypertune_loss is not None:
-            hpt = hypertune.HyperTune()
-            hpt.report_hyperparameter_tuning_metric(
-                hyperparameter_metric_tag=self.hypertune_loss,
-                metric_value=self.validation['test_' + self.hypertune_loss].mean())
+        if self.hypertune_loss is None or self.validation is None:
+            return
+        hpt = hypertune.HyperTune()
+        hpt.report_hyperparameter_tuning_metric(
+            hyperparameter_metric_tag=self.hypertune_loss,
+            metric_value=self.validation['test_' + self.hypertune_loss].mean())
