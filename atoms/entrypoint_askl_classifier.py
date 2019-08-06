@@ -125,12 +125,12 @@ def main():
     else:
         raise NotImplementedError
 
-    if args.debug:
-        data, _ = load_breast_cancer(return_X_y=True)
-    else:
+    try:
         local_file_path = os.path.join("/tmp/", "train_data.csv")
         subprocess.check_call(['gsutil', 'cp', args.train_files, local_file_path])
         data = read_csv(local_file_path)  # by convention the first column is always the target
+    except FileNotFoundError:
+        data = read_csv(args.train_files)  # for debug
 
     skf = KFold(n_splits=3, shuffle=True)
     folds = skf.split(data)
