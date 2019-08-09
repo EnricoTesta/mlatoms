@@ -1,27 +1,18 @@
 import numpy as np
 
 
-class CustomPreprocessor(object):
-    """Stores means of each column of a matrix and uses them for preprocessing.
-    """
+class MySimpleScaler(object):
+  def __init__(self):
+    self._means = None
+    self._stds = None
 
-    def __init__(self):
-        """On initialization, is not tied to any distribution."""
-        self._means = None
+  def preprocess(self, data):
+    if self._means is None: # during training only
+      self._means = np.mean(data, axis=0)
 
-    def preprocess(self, data):
-        """Transforms a matrix.
+    if self._stds is None: # during training only
+      self._stds = np.std(data, axis=0)
+      if not self._stds.all():
+        raise ValueError('At least one column has standard deviation of 0.')
 
-        The first time this is called, it stores the means of each column of
-        the input. Then it transforms the input so each column has mean 0. For
-        subsequent calls, it subtracts the stored means from each column. This
-        lets you 'center' data at prediction time based on the distribution of
-        the original training data.
-
-        Args:
-            data: A NumPy matrix of numerical data.
-
-        Returns:
-            A transformed matrix with the same dimensions as the input.
-        """
-        return data
+    return (data - self._means) / self._stds
