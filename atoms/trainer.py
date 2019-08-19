@@ -18,6 +18,7 @@ import subprocess
 import hypertune
 from datetime import datetime as dt
 from pickle import dump
+from yaml import safe_load
 from pandas import read_csv, DataFrame
 from sklearn.model_selection import cross_validate, cross_val_predict
 
@@ -93,15 +94,26 @@ class Trainer:
 
     def run(self):
 
+        # Step 0 - Retrieve info.yml
+        try:
+            remote_info_path = "/".join(self.train_data_path.split("/")[0:-1]) + "/info.yml"
+            local_info_path = os.path.join("/tmp/", "info.yml")
+            subprocess.check_call(['gsutil', 'cp', remote_info_path, local_info_path])
+            with open(local_info_path, 'r') as stream:
+                info = safe_load(stream)
+        except:
+            raise Exception("Unable to load info file.")
+
         # Step 1 - Read data
         try:
             local_file_path = os.path.join("/tmp/", "train_data.csv")
             subprocess.check_call(['gsutil', 'cp', self.train_data_path, local_file_path])
-            train_data = read_csv(local_file_path)  # by convention the first column is always the target
-        except FileNotFoundError:
-            train_data = read_csv(self.train_data_path)  # for debug
-        y = train_data.iloc[:, 0]
-        x = train_data.iloc[:, 1:]
+            train_data = read_csv(local_file_path
+                                  , usecols=lambda w: w not in info["USELESS_COLUMN"] + [info["ID_COLUMN"]])
+        except:
+            raise Exception("Unable to load train data file.")
+        y = train_data[info["TARGET_COLUMN"]]
+        x = train_data.iloc[:, train_data.columns != info["TARGET_COLUMN"]]
 
         # Step 2 - Cross Validation generalization assessment
         # TODO: define a CV strategy
