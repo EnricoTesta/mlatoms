@@ -28,7 +28,7 @@ def get_args():
         help='The directory to store the model')
     parser.add_argument(
         '--train-files',
-        default='/mlatoms/data/classification/binary/binary_classification_numeric_sample_data.csv',
+        default='/mlatoms/data/classification/binary/',
         metavar='train_files',
         help='The directory to fetch train data')
 
