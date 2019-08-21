@@ -130,6 +130,8 @@ class Trainer:
         except:
             raise Exception("Unable to load train data file.")
         y = train_data[info["TARGET_COLUMN"]]
+        if self.algo.__name__ in CLASSIFICATION_ESTIMATORS and y.apply(lambda x: x - int(x) != 0).any():  # THIS IS SLOW
+            raise ValueError("Target variable for classification algorithms must be integer encoded.")
         x = train_data.iloc[:, train_data.columns != info["TARGET_COLUMN"]]
 
         # Step 2 - Cross Validation generalization assessment
