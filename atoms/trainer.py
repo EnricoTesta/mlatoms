@@ -17,9 +17,10 @@ import random
 import subprocess
 import hypertune
 from datetime import datetime as dt
+from shutil import rmtree
 from pickle import dump
 from yaml import safe_load
-from pandas import read_csv, DataFrame
+from pandas import read_csv, DataFrame, concat
 from sklearn.model_selection import cross_validate, cross_val_predict
 
 
@@ -94,22 +95,35 @@ class Trainer:
 
     def run(self):
 
-        # Step 0 - Retrieve info.yml
+        # Step 0 - Retrieve data folder
+        local_path = os.getcwd() + "/tmp/"
+        if os.path.exists(local_path):  # start from scratch
+            rmtree(local_path)
+        os.makedirs(local_path)
+        os.system(' '.join(['gsutil -m', 'rsync', self.train_data_path, local_path]))  # fails if called by subprocess
+
+        # Step 1 - Read info.yml
         try:
-            remote_info_path = "/".join(self.train_data_path.split("/")[0:-1]) + "/info.yml"
-            local_info_path = os.path.join("/tmp/", "info.yml")
-            subprocess.check_call(['gsutil', 'cp', remote_info_path, local_info_path])
+            local_info_path = os.path.join(local_path, "info.yml")
             with open(local_info_path, 'r') as stream:
                 info = safe_load(stream)
         except:
+            rmtree(local_path)
             raise Exception("Unable to load info file.")
 
-        # Step 1 - Read data
+        # Step 1 - Read data (csv format)
         try:
-            local_file_path = os.path.join("/tmp/", "train_data.csv")
-            subprocess.check_call(['gsutil', 'cp', self.train_data_path, local_file_path])
-            train_data = read_csv(local_file_path
-                                  , usecols=lambda w: w not in info["USELESS_COLUMN"] + [info["ID_COLUMN"]])
+            file_list = [item for item in os.listdir(local_path)
+                         if os.path.isfile(os.path.join(local_path, item)) and item.split(".")[-1] == 'csv']
+            if len(file_list) == 1:
+                train_data = read_csv(os.path.join(local_path, file_list[0]),
+                                      usecols=lambda w: w not in info["USELESS_COLUMN"] + [info["ID_COLUMN"]])
+            else:
+                dfs = []
+                for file in file_list:
+                    dfs.append(read_csv(os.path.join(local_path, file),
+                                        usecols=lambda w: w not in info["USELESS_COLUMN"] + [info["ID_COLUMN"]]))
+                train_data = concat(dfs, axis=0)
         except:
             raise Exception("Unable to load train data file.")
         y = train_data[info["TARGET_COLUMN"]]
