@@ -58,9 +58,12 @@ class Trainer:
         suffix = ''.join((random.choice(available_characters) for _ in range(10)))
         return ts + suffix
 
-    def _get_scoring_list(self):
+    def _get_scoring_list(self, target):
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS:
-            return ['accuracy', 'roc_auc', 'neg_log_loss']
+            classification_metrics = ['neg_log_loss', 'accuracy']
+            if target.unique().shape[0] == 2:
+                classification_metrics += ['roc_auc']  # binary case
+            return classification_metrics
         elif self.algo.__name__ in REGRESSION_ESTIMATORS:
             return ['neg_median_absolute_error']
         else:
@@ -83,7 +86,7 @@ class Trainer:
             raise NotImplementedError
 
     def generalization_assessment(self, x, y):
-        return cross_validate(self.algo(**self.params['algo']), x, y=y, scoring=self._get_scoring_list(),
+        return cross_validate(self.algo(**self.params['algo']), x, y=y, scoring=self._get_scoring_list(y),
                               return_train_score=True, n_jobs=-1, cv=3)
 
     def get_out_of_samples_prediction(self, x, y):
