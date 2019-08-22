@@ -5,6 +5,7 @@ WORKDIR /root
 RUN pip install scikit-learn==0.20.2 && \
     pip install cloudml-hypertune && \
     pip install pandas==0.23.4 && \
+    pip install pyYAML==5.1.2 && \
     wget -nv \
     https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz && \
     mkdir /root/tools && \
