@@ -189,7 +189,10 @@ class Trainer:
             subprocess.check_call(
                 ['gsutil', 'cp', tmp_predictions_file, os.path.join(self.model_path, predictions_file_name)])
 
-        # Step 6 - Report Loss to Hypertune
+        # Step 6 - Clean-up
+        rmtree(local_path)
+
+        # Step 7 - Report Loss to Hypertune
         if self.hypertune_loss is None or self.validation is None:
             return
         hpt = hypertune.HyperTune()
