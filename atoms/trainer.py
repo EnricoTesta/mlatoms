@@ -89,9 +89,17 @@ class Trainer:
         return cross_validate(self.algo(**self.params['algo']), x, y=y, scoring=self._get_scoring_list(y),
                               return_train_score=True, n_jobs=-1, cv=3)
 
-    def get_out_of_samples_prediction(self, x, y):
-        return cross_val_predict(self.algo(**self.params['algo']), x, y=y, n_jobs=-1, cv=3,
+    def get_out_of_samples_prediction(self, x, y, idx):
+        pred = cross_val_predict(self.algo(**self.params['algo']), x, y=y, n_jobs=-1, cv=3,
                                  method=self._get_score_method())
+        predictions_col_names = []
+        if pred.shape[1] == 2:
+            predictions_col_names.append("value")  # either class labels or regression values
+        else:
+            for i in range(pred.shape[1]):
+                predictions_col_names.append("probability_" + str(i))
+        # TODO: ensure cross_val_predict does not change row order
+        return concat([idx, DataFrame(pred, columns=predictions_col_names)], axis=1)
 
     def fit(self, x, y):
         return self.algo(**self.params['algo']).fit(x, y)
@@ -120,15 +128,18 @@ class Trainer:
                          if os.path.isfile(os.path.join(local_path, item)) and item.split(".")[-1] == 'csv']
             if len(file_list) == 1:
                 train_data = read_csv(os.path.join(local_path, file_list[0]),
-                                      usecols=lambda w: w not in info["USELESS_COLUMN"] + [info["ID_COLUMN"]])
+                                      usecols=lambda w: w not in info["USELESS_COLUMN"])
+                idx = train_data.pop(info["ID_COLUMN"])
             else:
                 dfs = []
                 for file in file_list:
                     dfs.append(read_csv(os.path.join(local_path, file),
-                                        usecols=lambda w: w not in info["USELESS_COLUMN"] + [info["ID_COLUMN"]]))
+                                        usecols=lambda w: w not in info["USELESS_COLUMN"]))
                 train_data = concat(dfs, axis=0)
+                idx = train_data.pop(info["ID_COLUMN"])
         except:
             raise Exception("Unable to load train data file.")
+        idx.rename("id", inplace=True)
         y = train_data[info["TARGET_COLUMN"]]
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS and y.apply(lambda x: x - int(x) != 0).any():  # THIS IS SLOW
             raise ValueError("Target variable for classification algorithms must be integer encoded.")
@@ -140,12 +151,7 @@ class Trainer:
 
         # Step 3 - Compute out-of-fold predictions (useful for stacking)
         # TODO: define a CV strategy
-        self.predictions = self.get_out_of_samples_prediction(x, y)
-        try:
-            if self._get_estimator_type() == 'classification':
-                self.predictions = self.predictions[:, 1]  # keep only probabilty of class 1
-        except TypeError:
-            pass  # this happens when subclass overrides prediction method. Should find a better way to handle this
+        self.predictions = self.get_out_of_samples_prediction(x, y, idx)
 
         # Step 4 - Fit model on entire train data
         self.trained_model = self.fit(x, y)
@@ -179,7 +185,7 @@ class Trainer:
             pass
         else:
             tmp_predictions_file = os.path.join('/tmp/', predictions_file_name)
-            DataFrame(self.predictions).to_csv(tmp_predictions_file, index=False)
+            self.predictions.to_csv(tmp_predictions_file, index=False)
             subprocess.check_call(
                 ['gsutil', 'cp', tmp_predictions_file, os.path.join(self.model_path, predictions_file_name)])
 
