@@ -1,6 +1,10 @@
 import os
 import pickle
 import numpy as np
+from pandas import DataFrame
+from logging import getLogger
+
+logger = getLogger("xgb_predictor")
 
 
 class MyPredictor(object):
@@ -9,19 +13,34 @@ class MyPredictor(object):
         self._preprocessor = preprocessor
 
     def predict(self, instances, **kwargs):
-        inputs = np.asarray(instances)
+        logger.info("Retrieving header, inputs, and info...")
+        header = instances[0]  # first row is header row
+        inputs = DataFrame(data=instances[1:], columns=header)
+        info = kwargs.get('info')
+
+        logger.info("Dropping useless columns. Fetching ids...")
+        for col in info["USELESS_COLUMN"] + info["STRATIFICATION_COLUMN"]:
+            try:
+                inputs.drop(col, inplace=True, axis=1)
+            except KeyError:
+                logger.warning("Tried to drop \"{}\" but it wasn't found in axis.".format(col))
+        ids = inputs.pop(info["ID_COLUMN"])
+        raw_data = np.asarray(inputs)
         try:
-            preprocessed_inputs = self._preprocessor.preprocess(inputs)
+            preprocessed_inputs = self._preprocessor.preprocess(raw_data)
         except:
-            preprocessed_inputs = inputs
+            logger.info("No preprocessing applied")
+            preprocessed_inputs = raw_data
 
         # Feature name validation shut off. Expected same order as in train data.
         if kwargs.get('probabilities'):
+            logger.info("Predicting probabilities...")
             probabilities = self._model.predict_proba(preprocessed_inputs, validate_features=False)
-            return probabilities.tolist()
+            return np.concatenate((ids.values.reshape(-1, 1), probabilities), axis=1).tolist()
         else:
+            logger.info("Predicting values...")
             outputs = self._model.predict(preprocessed_inputs, validate_features=False)
-            return outputs.tolist()
+            return np.concatenate((ids.values.reshape(-1, 1), outputs), axis=1).tolist()
 
     @classmethod
     def from_path(cls, model_dir):
