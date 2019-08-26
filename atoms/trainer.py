@@ -22,6 +22,7 @@ from pickle import dump
 from yaml import safe_load
 from pandas import read_csv, DataFrame, concat
 from sklearn.model_selection import cross_validate, cross_val_predict
+from sklearn import metrics
 
 
 CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier', 'XGBClassifier', 'AutoSklearnClassifier']
@@ -59,15 +60,32 @@ class Trainer:
         return ts + suffix
 
     def _get_scoring_list(self, target):
+        scoring_dict = {}
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS:
-            classification_metrics = ['neg_log_loss', 'accuracy']
-            if target.unique().shape[0] == 2:
-                classification_metrics += ['roc_auc']  # binary case
-            return classification_metrics
+
+            scoring_dict['accuracy'] = metrics.make_scorer(metrics.accuracy_score)
+            # scoring_dict['balanced_accuracy'] = metrics.balanced_accuracy_score  # MISSING FROM sklearn
+            scoring_dict['roc_auc'] = metrics.make_scorer(metrics.roc_auc_score)  # average: 'macro' is default
+            scoring_dict['log_loss'] = metrics.make_scorer(metrics.log_loss, greater_is_better=False, needs_proba=True)
+            # scoring_dict['brier_loss'] = metrics.make_scorer(metrics.brier_score_loss, greater_is_better=False, needs_proba=True) # ValueError: bad input shape (67, 2)  # inappropriate for ordinals with 3 or more values
+            scoring_dict['hinge_loss'] = metrics.make_scorer(metrics.hinge_loss, greater_is_better=False)
+            scoring_dict['matthews_corr'] = metrics.make_scorer(metrics.matthews_corrcoef)
+            if target.unique().shape[0] == 2:  # binary
+                scoring_dict['f1'] = metrics.make_scorer(metrics.f1_score)
+                scoring_dict['precision'] = metrics.make_scorer(metrics.precision_score)
+                scoring_dict['recall'] = metrics.make_scorer(metrics.recall_score)
+                scoring_dict['fbeta'] = metrics.make_scorer(metrics.fbeta_score, beta=1, average='binary')
+            else:  # multi-class
+                scoring_dict['f1'] = metrics.make_scorer(metrics.f1_score, average='macro')
+                scoring_dict['precision'] = metrics.make_scorer(metrics.precision_score, average='macro')
+                scoring_dict['recall'] = metrics.make_scorer(metrics.recall_score, average='macro')
+                scoring_dict['fbeta'] = metrics.make_scorer(metrics.fbeta_score, beta=1, average='macro')
+
         elif self.algo.__name__ in REGRESSION_ESTIMATORS:
-            return ['neg_median_absolute_error']
+            raise NotImplementedError
         else:
             raise NotImplementedError
+        return scoring_dict
 
     def _get_score_method(self):
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS:
@@ -90,6 +108,7 @@ class Trainer:
                               return_train_score=True, n_jobs=-1, cv=3)
 
     def get_out_of_samples_prediction(self, x, y, idx):
+        # TODO: fix ValueError: Shape of passed values is (199, 2), indices imply (199, 1)
         pred = cross_val_predict(self.algo(**self.params['algo']), x, y=y, n_jobs=-1, cv=3,
                                  method=self._get_score_method())
         predictions_col_names = []
