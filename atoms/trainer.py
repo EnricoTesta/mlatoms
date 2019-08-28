@@ -28,6 +28,7 @@ from sklearn import metrics
 CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
                              'XGBClassifier', 'AutoSklearnClassifier', 'DummyClassifier']
 REGRESSION_ESTIMATORS = ['LinearRegression']
+BENCHMARK_ESTIMATORS = ['DummyClassifier']
 
 
 class Trainer:
@@ -105,8 +106,13 @@ class Trainer:
             raise NotImplementedError
 
     def generalization_assessment(self, x, y):
-        return cross_validate(self.algo(**self.params['algo']), x, y=y, scoring=self._get_scoring_list(y),
-                              return_train_score=True, n_jobs=-1, cv=3)
+        validation = cross_validate(self.algo(**self.params['algo']), x, y=y, scoring=self._get_scoring_list(y),
+                                    return_train_score=True, n_jobs=-1, cv=3)
+        if self.algo.__name__ in BENCHMARK_ESTIMATORS:
+            validation['benchmark'] = 1
+        else:
+            validation['benchmark'] = 0
+        return validation
 
     def get_out_of_samples_prediction(self, x, y, idx):
         pred = cross_val_predict(self.algo(**self.params['algo']), x, y=y, n_jobs=-1, cv=3,
@@ -170,7 +176,8 @@ class Trainer:
 
         # Step 3 - Compute out-of-fold predictions (useful for stacking)
         # TODO: define a CV strategy
-        self.predictions = self.get_out_of_samples_prediction(x, y, idx)
+        if self.algo.__name__ not in BENCHMARK_ESTIMATORS:
+            self.predictions = self.get_out_of_samples_prediction(x, y, idx)
 
         # Step 4 - Fit model on entire train data
         self.trained_model = self.fit(x, y)
