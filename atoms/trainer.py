@@ -25,7 +25,8 @@ from sklearn.model_selection import cross_validate, cross_val_predict
 from sklearn import metrics
 
 
-CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier', 'XGBClassifier', 'AutoSklearnClassifier']
+CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
+                             'XGBClassifier', 'AutoSklearnClassifier', 'DummyClassifier']
 REGRESSION_ESTIMATORS = ['LinearRegression']
 
 
@@ -108,11 +109,10 @@ class Trainer:
                               return_train_score=True, n_jobs=-1, cv=3)
 
     def get_out_of_samples_prediction(self, x, y, idx):
-        # TODO: fix ValueError: Shape of passed values is (199, 2), indices imply (199, 1)
         pred = cross_val_predict(self.algo(**self.params['algo']), x, y=y, n_jobs=-1, cv=3,
                                  method=self._get_score_method())
         predictions_col_names = []
-        if pred.shape[1] == 2:
+        if pred.shape[1] == 1:
             predictions_col_names.append("value")  # either class labels or regression values
         else:
             for i in range(pred.shape[1]):
