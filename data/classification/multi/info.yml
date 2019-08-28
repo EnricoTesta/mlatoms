@@ -1,0 +1,6 @@
+TARGET_COLUMN: 'target'
+ID_COLUMN: 'id'
+STRATIFICATION_COLUMN:
+  - ''
+USELESS_COLUMN:
+  - 'no_use_col'
