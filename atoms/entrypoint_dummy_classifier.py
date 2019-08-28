@@ -12,7 +12,7 @@ def get_args():
     parser.add_argument(
         '--strategy',
         type=str,
-        default='prior',
+        default='stratified',
         metavar='strategy',
         help="Used to specify a strategy. Can take values: 'prior', 'stratified',"
              " 'most_frequent', 'uniform', 'constant'")
