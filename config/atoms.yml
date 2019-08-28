@@ -23,3 +23,9 @@ ATOMS:
     image_name: 'classification_xgboost'
     image_tag: 'class_xgb'
     prediction_sources: '/mlatoms/predictionApps/sklearnApp/'
+  dummy_classifier:
+    docker_file: 'docker_dummy_classifier'
+    docker_entrypoint: 'entrypoint_dummy_classifier.py'
+    image_name: 'classification_dummy'
+    image_tag: 'class_dummy'
+    prediction_sources: '/mlatoms/predictionApps/sklearnApp/'
