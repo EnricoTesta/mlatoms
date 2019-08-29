@@ -1,5 +1,8 @@
-from sklearn.dummy import DummyClassifier
 from trainer import Trainer
+# from sklearn.base import BaseEstimator
+from sklearn.dummy import DummyClassifier
+# from pandas import Series
+# from numpy import ones
 import argparse
 
 
@@ -29,12 +32,35 @@ def get_args():
         help='The directory to store the model')
     parser.add_argument(
         '--train-files',
-        default='/mlatoms/data/classification/binary/',
+        default='/mlatoms/data/classification/multi/',
         metavar='train_files',
         help='The directory to fetch train data')
 
     args = parser.parse_args()
     return args
+
+
+# class DummyClassifier(BaseEstimator):
+#
+#     def __init__(self, strategy='most_frequent', constant=None):
+#         self.strategy = strategy
+#         self.constant = constant
+#
+#         self.output_shape = None
+#         self.prediction_label = None
+#         self.prediction_proba = None
+#
+#     def predict(self, x):
+#         return self.prediction_label*ones((x.shape[0], ))
+#
+#     def predict_proba(self, x):
+#         return self.prediction_proba*ones((x.shape[0], self.output_shape))
+#
+#     def fit(self, x, y):
+#         counts = Series(y).value_counts(normalize=True)
+#         self.prediction_label = counts.idxmax()
+#         self.output_shape = counts.shape[0]
+#         self.prediction_proba = 1/self.output_shape
 
 
 def main():
