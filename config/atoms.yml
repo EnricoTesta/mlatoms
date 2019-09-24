@@ -31,7 +31,7 @@ ATOMS:
     prediction_sources: '/mlatoms/predictionApps/sklearnApp/'
 SCORING:
   sklearn_scorer:
-    docker_file: 'docker_logisticRegression_classifier'
+    docker_file: 'docker_sklearn_scorer'
     docker_entrypoint: 'entrypoint_sklearn_scorer.py'
     image_name: 'scorer_sklearn'
     image_tag: 'scorer_skl'
