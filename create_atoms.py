@@ -16,7 +16,7 @@ for atom in data['ATOMS'].keys():
 
     # Build shell command
     cmd = ["cd atoms",
-           "sudo docker build -f " + data['ATOMS'][atom]['docker_file'] + " -t " + get_image_uri(atom) + " ./"]
+           "sudo docker build -f " + data['ATOMS'][atom]['docker_file'] + " -t " + get_image_uri('ATOMS', atom) + " ./"]
 
     # Execute command
     try:
@@ -25,6 +25,26 @@ for atom in data['ATOMS'].keys():
     except CalledProcessError as e:
         print("Failed to execute subprocess for container %s. Return code is %s." % (atom, e.returncode))
         failed_builds.append(atom)
+
+    # TODO: Test atom locally on sample data
+    pass
+
+for scorer in data['SCORING'].keys():
+
+    # Notification
+    print("Building docker container for: %s" % scorer)
+
+    # Build shell command
+    cmd = ["cd scoring",
+           "sudo docker build -f " + data['SCORING'][scorer]['docker_file'] + " -t " + get_image_uri('SCORING', scorer) + " ./"]
+
+    # Execute command
+    try:
+        check_call(' && '.join(cmd), shell=True)
+        successful_builds.append(scorer)
+    except CalledProcessError as e:
+        print("Failed to execute subprocess for container %s. Return code is %s." % (scorer, e.returncode))
+        failed_builds.append(scorer)
 
     # TODO: Test atom locally on sample data
     pass
