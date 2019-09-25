@@ -46,6 +46,14 @@ class BatchPredictor(object):
                 names.append('probability_' + str(i))  # classification setting
             return names
 
+    def model_predict(self, preprocessed_inputs):
+        """Universal prediction method. This is subclassed for each specific library/implementation."""
+        return preprocessed_inputs
+
+    def model_predict_proba(self, preprocessed_inputs):
+        """Universal prediction method. This is subclassed for each specific library/implementation."""
+        return preprocessed_inputs
+
     def predict(self, score_dir):
         # Assumption: score_dir contains a single info.yml file and multiple csv files
 
@@ -89,14 +97,14 @@ class BatchPredictor(object):
         tmp_file_path = os.path.join(local_path, 'results.csv')
         if self._use_probabilities:
             logger.info("Predicting probabilities...")
-            probabilities = self._model.predict_proba(preprocessed_inputs)
+            probabilities = self.model_predict_proba(preprocessed_inputs)
             column_names = self.generate_column_names(probabilities)
             DataFrame(np.concatenate((ids.values.reshape(-1, 1), probabilities), axis=1),
                       columns=['id'] + column_names).to_csv(path_or_buf=tmp_file_path, index=False)
 
         else:
             logger.info("Predicting values...")
-            outputs = self._model.predict(preprocessed_inputs)
+            outputs = self.model_predict(preprocessed_inputs)
             column_names = self.generate_column_names(outputs)
             DataFrame(np.concatenate((ids.values.reshape(-1, 1), outputs), axis=1),
                       columns=['id'] + column_names).to_csv(path_or_buf=tmp_file_path, index=False)
