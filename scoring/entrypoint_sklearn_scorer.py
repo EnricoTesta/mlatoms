@@ -27,7 +27,7 @@ def get_args():
         help='The directory to store output data')
     parser.add_argument(
         '--use-proba',
-        default=True,
+        default=1,
         metavar='use_proba',
         help='Flag whether or not to use probabilities.')
 
