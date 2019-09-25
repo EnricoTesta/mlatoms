@@ -4,6 +4,15 @@ from scorer import BatchPredictor
 from logging import getLogger
 
 
+class SKLearnBatchPredictor(BatchPredictor):
+
+    def model_predict(self, preprocessed_input):
+        return self._model.predict(preprocessed_input)
+
+    def model_predict_proba(self, preprocessed_input):
+        return self._model.predict_proba(preprocessed_input)
+
+
 def get_args():
     """Argument parser.
     Returns:
@@ -45,8 +54,8 @@ def main():
     for item in args_dict:
         param_dict[item] = args_dict[item]
 
-    p = BatchPredictor.from_path(model_file_path=param_dict['model_file'], preprocess_file=None, output_dir=param_dict['output_dir']
-                                 , use_probabilities=param_dict['use_proba'])
+    p = SKLearnBatchPredictor.from_path(model_file_path=param_dict['model_file'], preprocess_file=None,
+                                        output_dir=param_dict['output_dir'], use_probabilities=param_dict['use_proba'])
     p.predict(param_dict['score_dir'])
 
 
