@@ -1,5 +1,6 @@
 import os
 import pickle
+import subprocess
 import numpy as np
 from shutil import rmtree
 from yaml import safe_load
@@ -85,20 +86,26 @@ class BatchPredictor(object):
             preprocessed_inputs = raw_data
 
         # Step 4 - Predict
+        tmp_file_path = os.path.join(local_path, 'results.csv')
         if self._use_probabilities:
             logger.info("Predicting probabilities...")
             probabilities = self._model.predict_proba(preprocessed_inputs)
             column_names = self.generate_column_names(probabilities)
             DataFrame(np.concatenate((ids.values.reshape(-1, 1), probabilities), axis=1),
-                      columns=['id'] + column_names).to_csv(path_or_buf=self._output_dir + '/results.csv', index=False)
+                      columns=['id'] + column_names).to_csv(path_or_buf=tmp_file_path, index=False)
+
         else:
             logger.info("Predicting values...")
             outputs = self._model.predict(preprocessed_inputs)
             column_names = self.generate_column_names(outputs)
             DataFrame(np.concatenate((ids.values.reshape(-1, 1), outputs), axis=1),
-                      columns=['id'] + column_names).to_csv(path_or_buf=self._output_dir + '/results.csv', index=False)
+                      columns=['id'] + column_names).to_csv(path_or_buf=tmp_file_path, index=False)
 
-        # Step 5 - Clean-up
+        # Step 5 - Send results to GCS
+        subprocess.check_call(['gsutil', 'cp', tmp_file_path,
+                               os.path.join(self._output_dir, 'results.csv')])
+
+        # Step 6 - Clean-up
         rmtree(local_path)
 
     @classmethod
