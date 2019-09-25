@@ -27,7 +27,7 @@ class BatchPredictor(object):
 
     def default_preprocess(self, info, inputs):
         logger.info("Dropping useless columns. Fetching ids...")
-        for col in info["USELESS_COLUMN"] + info["STRATIFICATION_COLUMN"]:
+        for col in info["USELESS_COLUMN"] + info["STRATIFICATION_COLUMN"] + [info["TARGET_COLUMN"]]:
             try:
                 inputs.drop(col, inplace=True, axis=1)
             except KeyError:
