@@ -35,3 +35,8 @@ SCORING:
     docker_entrypoint: 'entrypoint_sklearn_scorer.py'
     image_name: 'scorer_sklearn'
     image_tag: 'scorer_skl'
+  xgb_scorer:
+    docker_file: 'docker_xgboost_scorer'
+    docker_entrypoint: 'entrypoint_xgb_scorer.py'
+    image_name: 'scorer_xgboost'
+    image_tag: 'scorer_xgb'
