@@ -114,6 +114,8 @@ class Trainer:
         # Logloss correction
         validation['train_log_loss'] = -validation['train_log_loss']
         validation['test_log_loss'] = -validation['test_log_loss']
+        # Algo name
+        validation['algo'] = self.algo.__name__
         return validation
 
     def get_out_of_samples_prediction(self, x, y, idx):
