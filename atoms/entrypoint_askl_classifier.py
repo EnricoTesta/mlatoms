@@ -16,7 +16,7 @@ def get_args():
     Returns:
       Dictionary of arguments.
     """
-    parser = argparse.ArgumentParser(description='Light Gradient Boosting Classifier')
+    parser = argparse.ArgumentParser(description='Auto Scikit-learn Classifier')
     parser.add_argument(
         '--time_left_for_this_task',
         type=int,
@@ -148,7 +148,7 @@ def main():
             param_dict['algo'][item] = args_dict[item]
 
     t = ASKLClassifierTrainer(train_data_path=args.train_files, model_path=args.model_dir,
-                              algo=AutoSklearnClassifier, params=param_dict, hypertune_loss='accuracy')
+                              algo=AutoSklearnClassifier, params=param_dict)
     t.run()
 
 

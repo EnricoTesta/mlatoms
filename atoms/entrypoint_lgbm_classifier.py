@@ -97,7 +97,7 @@ def main():
             param_dict[item] = args_dict[item]
 
     t = Trainer(train_data_path=args.train_files, model_path=args.model_dir, algo=LGBMClassifier,
-                params=param_dict, hypertune_loss='accuracy')
+                params=param_dict)
     t.run()
 
 
