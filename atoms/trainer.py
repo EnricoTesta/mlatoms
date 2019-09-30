@@ -110,10 +110,10 @@ class Trainer:
     def generalization_assessment(self, x, y):
         validation = cross_validate(self.algo(**self.params['algo']), x, y=y, scoring=self._get_scoring_list(y),
                                     return_train_score=True, n_jobs=-1, cv=3)
-        if self.algo.__name__ in BENCHMARK_ESTIMATORS:
-            validation['benchmark'] = 1
-        else:
-            validation['benchmark'] = 0
+        validation['benchmark'] = int(self.algo.__name__ in BENCHMARK_ESTIMATORS)
+        # Logloss correction
+        validation['train_log_loss'] = -validation['train_log_loss']
+        validation['test_log_loss'] = -validation['test_log_loss']
         return validation
 
     def get_out_of_samples_prediction(self, x, y, idx):
