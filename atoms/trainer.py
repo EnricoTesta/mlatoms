@@ -12,6 +12,7 @@ and suppose you are dealing with small data (max 1 GB).
 
 """
 import os
+import numpy as np
 import string
 import random
 import subprocess
@@ -35,7 +36,7 @@ class Trainer:
     """How do I know what trials I'm in??? It would be of great help in using HyperTune and setting model name.
     --> Can be found in TrainingOutput..."""
 
-    def __init__(self, train_data_path=None, model_path=None, algo=None, params=None, hypertune_loss=None):
+    def __init__(self, train_data_path=None, model_path=None, algo=None, params=None):
         # Input information
         if train_data_path is None or model_path is None:
             raise ValueError("Must set train_data_path and model_path")
@@ -47,9 +48,10 @@ class Trainer:
             self.params = {'algo': {}, 'fit': {}}
         else:
             self.params = params
-        self.hypertune_loss = hypertune_loss
 
         # Output properties
+        self.problem_specs = None
+        self.hypertune_loss = None
         self.validation = None
         self.predictions = None
         self.trained_model = None
@@ -129,6 +131,32 @@ class Trainer:
     def fit(self, x, y):
         return self.algo(**self.params['algo']).fit(x, y)
 
+    @staticmethod
+    def infer_problem_specs(x, y):
+        """Returns a dictionary with 'type': regression/classification, 'balanced': True/False/None,
+         'binary': True/False/None, 'n_dimensions': integer, 'n_samples': integer"""
+        d = {'n_dimensions': x.shape[1], 'n_samples': x.shape[0]}
+        yu, yu_counts = np.unique(y, return_counts=True)
+        if len(yu) >= 100 or np.count_nonzero(yu - np.around(yu)) > 0:
+            d['type'] = 'regression'
+            d['binary'] = None
+            d['balanced'] = None
+        else:
+            d['type'] = 'classification'
+        if d['type'] == 'classification':
+            d['binary'] = len(yu) == 2
+            d['balanced'] = bool(yu_counts.max() == yu_counts.min())
+        return d
+
+    def get_hypertune_loss(self):
+        if self.problem_specs['type'] == 'classification':
+            if self.problem_specs['binary']:
+                return 'AUC'  # to be tested
+            else:
+                return 'accuracy'
+        else:
+            return 'MeanAbsoluteError'  # to be tested
+
     def run(self):
 
         # Step 0 - Retrieve data folder
@@ -169,6 +197,9 @@ class Trainer:
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS and y.apply(lambda x: x - int(x) != 0).any():  # THIS IS SLOW
             raise ValueError("Target variable for classification algorithms must be integer encoded.")
         x = train_data.iloc[:, train_data.columns != info["TARGET_COLUMN"]]
+
+        self.problem_specs = self.infer_problem_specs(x, y)
+        self.hypertune_loss = self.get_hypertune_loss()
 
         # Step 2 - Cross Validation generalization assessment
         # TODO: define a CV strategy
