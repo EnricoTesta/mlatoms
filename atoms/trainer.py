@@ -153,11 +153,12 @@ class Trainer:
     def get_hypertune_loss(self):
         if self.problem_specs['type'] == 'classification':
             if self.problem_specs['binary']:
-                return 'AUC'  # to be tested
+                return 'binary_crossentropy'  # to be tested
             else:
-                return 'accuracy'
+                #return 'accuracy'
+                return 'categorical_crossentropy'  # to be tested
         else:
-            return 'MeanAbsoluteError'  # to be tested
+            return 'mean_absolute_error'  # to be tested
 
     def run(self):
 
