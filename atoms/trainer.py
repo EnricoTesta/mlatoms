@@ -30,13 +30,16 @@ CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
                              'XGBClassifier', 'AutoSklearnClassifier', 'DummyClassifier']
 REGRESSION_ESTIMATORS = ['LinearRegression']
 BENCHMARK_ESTIMATORS = ['DummyClassifier']
+HYPERTUNE_LOSSES = {'binary_crossentropy': 'log_loss',
+                    'categorical_crossentropy': 'log_loss',
+                    'accuracy': 'accuracy'}
 
 
 class Trainer:
     """How do I know what trials I'm in??? It would be of great help in using HyperTune and setting model name.
     --> Can be found in TrainingOutput..."""
 
-    def __init__(self, train_data_path=None, model_path=None, algo=None, params=None):
+    def __init__(self, train_data_path=None, model_path=None, algo=None, params=None, hypertune_loss=None):
         # Input information
         if train_data_path is None or model_path is None:
             raise ValueError("Must set train_data_path and model_path")
@@ -44,6 +47,7 @@ class Trainer:
         self.train_data_path = train_data_path
         self.model_path = model_path
         self.algo = algo  # this is a class
+        self.hypertune_loss = hypertune_loss
         if params is None:
             self.params = {'algo': {}, 'fit': {}}
         else:
@@ -51,7 +55,6 @@ class Trainer:
 
         # Output properties
         self.problem_specs = None
-        self.hypertune_loss = None
         self.validation = None
         self.predictions = None
         self.trained_model = None
@@ -150,16 +153,6 @@ class Trainer:
             d['balanced'] = bool(yu_counts.max() == yu_counts.min())
         return d
 
-    def get_hypertune_loss(self):
-        if self.problem_specs['type'] == 'classification':
-            if self.problem_specs['binary']:
-                return 'binary_crossentropy'  # to be tested
-            else:
-                #return 'accuracy'
-                return 'categorical_crossentropy'  # to be tested
-        else:
-            return 'mean_absolute_error'  # to be tested
-
     def run(self):
 
         # Step 0 - Retrieve data folder
@@ -202,7 +195,6 @@ class Trainer:
         x = train_data.iloc[:, train_data.columns != info["TARGET_COLUMN"]]
 
         self.problem_specs = self.infer_problem_specs(x, y)
-        self.hypertune_loss = self.get_hypertune_loss()
 
         # Step 2 - Cross Validation generalization assessment
         # TODO: define a CV strategy
@@ -258,4 +250,4 @@ class Trainer:
         hpt = hypertune.HyperTune()
         hpt.report_hyperparameter_tuning_metric(
             hyperparameter_metric_tag=self.hypertune_loss,
-            metric_value=self.validation['test_' + self.hypertune_loss].mean())
+            metric_value=self.validation['test_' + HYPERTUNE_LOSSES[self.hypertune_loss]].mean())
