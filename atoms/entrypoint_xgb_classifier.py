@@ -81,6 +81,11 @@ def get_args():
         default='/mlatoms/data/classification/binary/',
         metavar='train_files',
         help='The directory to fetch train data')
+    parser.add_argument(
+        '--hypertune-loss',
+        default=None,
+        metavar='hypertune_loss',
+        help='Hypertune loss name')
     args = parser.parse_args()
     return args
 
@@ -93,11 +98,11 @@ def main():
     # Make param dict
     param_dict = {'algo': {}, 'fit': {}}
     for item in args_dict:
-        if item not in ('model_dir', 'train_files'):
+        if item not in ('model_dir', 'train_files', 'hypertune_loss'):
             param_dict['algo'][item] = args_dict[item]
 
     t = Trainer(train_data_path=args.train_files, model_path=args.model_dir, algo=XGBClassifier,
-                params=param_dict)
+                params=param_dict, hypertune_loss=args.hypertune_loss)
     t.run()
 
 
