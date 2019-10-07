@@ -71,9 +71,7 @@ class Trainer:
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS:
 
             scoring_dict['accuracy'] = metrics.make_scorer(metrics.accuracy_score)
-            # scoring_dict['balanced_accuracy'] = metrics.balanced_accuracy_score  # MISSING FROM sklearn
             scoring_dict['log_loss'] = metrics.make_scorer(metrics.log_loss, greater_is_better=False, needs_proba=True)
-            # scoring_dict['brier_loss'] = metrics.make_scorer(metrics.brier_score_loss, greater_is_better=False, needs_proba=True) # ValueError: bad input shape (67, 2)  # inappropriate for ordinals with 3 or more values
             scoring_dict['matthews_corr'] = metrics.make_scorer(metrics.matthews_corrcoef)
             if target.unique().shape[0] == 2:  # binary
                 scoring_dict['roc_auc'] = metrics.make_scorer(metrics.roc_auc_score)  # average: 'macro' is default
