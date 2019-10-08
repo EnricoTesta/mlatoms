@@ -21,8 +21,8 @@ from datetime import datetime as dt
 from shutil import rmtree
 from pickle import dump
 from yaml import safe_load
-from pandas import read_csv, DataFrame, concat
-from sklearn.model_selection import cross_validate, cross_val_predict
+from pandas import read_csv, DataFrame, Series, concat
+from sklearn.model_selection import KFold, PredefinedSplit
 from sklearn import metrics
 
 
@@ -30,6 +30,7 @@ CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
                              'XGBClassifier', 'AutoSklearnClassifier', 'DummyClassifier']
 REGRESSION_ESTIMATORS = ['LinearRegression']
 BENCHMARK_ESTIMATORS = ['DummyClassifier']
+CV_FOLDS = 3
 HYPERTUNE_LOSSES = {'binary_crossentropy': 'log_loss',
                     'categorical_crossentropy': 'log_loss',
                     'accuracy': 'accuracy'}
@@ -108,31 +109,15 @@ class Trainer:
         else:
             raise NotImplementedError
 
-    def generalization_assessment(self, x, y):
-        validation = cross_validate(self.algo(**self.params['algo']), x, y=y, scoring=self._get_scoring_list(y),
-                                    return_train_score=True, n_jobs=-1, cv=3)
-        validation['benchmark'] = int(self.algo.__name__ in BENCHMARK_ESTIMATORS)
-        # Logloss correction
-        validation['train_log_loss'] = -validation['train_log_loss']
-        validation['test_log_loss'] = -validation['test_log_loss']
-        # Algo name
-        validation['algo'] = self.algo.__name__
-        return validation
-
-    def get_out_of_samples_prediction(self, x, y, idx):
-        pred = cross_val_predict(self.algo(**self.params['algo']), x, y=y, n_jobs=-1, cv=3,
-                                 method=self._get_score_method())
-        predictions_col_names = []
-        if pred.shape[1] == 1:
-            predictions_col_names.append("value")  # either class labels or regression values
-        else:
-            for i in range(pred.shape[1]):
-                predictions_col_names.append("probability_" + str(i))
-        # TODO: ensure cross_val_predict does not change row order
-        return concat([idx, DataFrame(pred, columns=predictions_col_names)], axis=1)
-
     def fit(self, x, y):
         return self.algo(**self.params['algo']).fit(x, y)
+
+    @staticmethod
+    def predict(estimator, x):
+        try:
+            return estimator.predict_proba(x)
+        except:
+            return estimator.predict(x)
 
     @staticmethod
     def infer_problem_specs(x, y):
@@ -150,6 +135,70 @@ class Trainer:
             d['binary'] = len(yu) == 2
             d['balanced'] = bool(yu_counts.max() == yu_counts.min())
         return d
+
+    def generate_folds(self, x, y):
+        # TODO: manage stratified version. Randomize by using shuffle but ensure indexes are not mixed up.
+        counter = 0
+        test_folds = -np.ones(y.shape)
+        for _, test_index in KFold(n_splits=CV_FOLDS, shuffle=False).split(x):
+            test_folds[test_index] = counter
+            counter += 1
+        return PredefinedSplit(test_folds)
+
+    def generalization_assessment(self, x, y, cv, scoring, idx):
+        validation = {}
+        pred = []
+        for train, test in cv.split(x):  # split method works on integer-based row index. Ignores DataFrame index.
+            x_train_indexes = x.index[train]
+            x_test_indexes = x.index[test]
+            y_train_indexes = y.index[train]
+            y_test_indexes = y.index[test]
+            fit_model = self.fit(x.loc[x_train_indexes, :], y.loc[y_train_indexes])
+
+            # Get predictions
+            pred_test = DataFrame(self.predict(fit_model, x.loc[x_test_indexes, :]))
+
+            # Get scoring
+            for key, scorer in scoring.items():
+                try:
+                    validation["train_{}".format(key)].append(scorer.__call__(fit_model, x.loc[x_train_indexes, :],
+                                                                              y.loc[y_train_indexes]))
+                except KeyError:
+                    validation["train_{}".format(key)] = [scorer.__call__(fit_model, x.loc[x_train_indexes, :],
+                                                                          y.loc[y_train_indexes])]
+                try:
+                    validation["test_{}".format(key)].append(scorer.__call__(fit_model, x.loc[x_test_indexes, :],
+                                                                             y.loc[y_test_indexes]))
+                except KeyError:
+                    validation["test_{}".format(key)] = [scorer.__call__(fit_model, x.loc[x_test_indexes, :],
+                                                                         y.loc[y_test_indexes])]
+
+            # Update output
+            pred.append(pred_test)
+
+        # Concatenate out-of-fold predictions
+        pred = concat(pred, axis=0)
+        pred.reset_index(inplace=True, drop=True)
+        predictions_col_names = []
+        if pred.shape[1] == 1:
+            predictions_col_names.append("value")  # either class labels or regression values
+        else:
+            for i in range(pred.shape[1]):
+                predictions_col_names.append("probability_" + str(i))
+        pred.columns = predictions_col_names
+        pred = concat([idx, pred], axis=1)  # TODO: ensure idx and pred rows are linked correctly
+
+        # Add validation info
+        for key in validation.keys():
+            validation[key] = Series(validation[key])
+        validation['benchmark'] = int(self.algo.__name__ in BENCHMARK_ESTIMATORS)
+        # Logloss correction
+        validation['train_log_loss'] = -validation['train_log_loss']
+        validation['test_log_loss'] = -validation['test_log_loss']
+        # Algo name
+        validation['algo'] = self.algo.__name__
+
+        return validation, pred
 
     def run(self):
 
@@ -176,17 +225,16 @@ class Trainer:
             if len(file_list) == 1:
                 train_data = read_csv(os.path.join(local_path, file_list[0]),
                                       usecols=lambda w: w not in info["USELESS_COLUMN"])
-                idx = train_data.pop(info["ID_COLUMN"])
             else:
                 dfs = []
                 for file in file_list:
                     dfs.append(read_csv(os.path.join(local_path, file),
                                         usecols=lambda w: w not in info["USELESS_COLUMN"]))
                 train_data = concat(dfs, axis=0)
-                idx = train_data.pop(info["ID_COLUMN"])
+            train_data.set_index(info["ID_COLUMN"], inplace=True, drop=True)
+            idx = Series(train_data.index, name="id")
         except:
             raise Exception("Unable to load train data file.")
-        idx.rename("id", inplace=True)
         y = train_data[info["TARGET_COLUMN"]]
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS and y.apply(lambda x: x - int(x) != 0).any():  # THIS IS SLOW
             raise ValueError("Target variable for classification algorithms must be integer encoded.")
@@ -194,14 +242,10 @@ class Trainer:
 
         self.problem_specs = self.infer_problem_specs(x, y)
 
-        # Step 2 - Cross Validation generalization assessment
-        # TODO: define a CV strategy
-        self.validation = self.generalization_assessment(x, y)
-
-        # Step 3 - Compute out-of-fold predictions (useful for stacking)
-        # TODO: define a CV strategy
-        if self.algo.__name__ not in BENCHMARK_ESTIMATORS:
-            self.predictions = self.get_out_of_samples_prediction(x, y, idx)
+        # Step 2 - Generalization Assessment
+        cv = self.generate_folds(x, y)
+        self.validation, self.predictions = self.generalization_assessment(x, y, cv=cv,
+                                                                           scoring=self._get_scoring_list(y), idx=idx)
 
         # Step 4 - Fit model on entire train data
         self.trained_model = self.fit(x, y)
