@@ -90,6 +90,16 @@ def get_args():
     return args
 
 
+class XGBClassifierTrainer(Trainer):
+
+    @staticmethod
+    def predict(estimator, x):
+        try:
+            return estimator.predict_proba(x, validate_features=False)
+        except:
+            return estimator.predict(x, validate_features=False)
+
+
 def main():
     # Training settings
     args = get_args()
@@ -101,8 +111,8 @@ def main():
         if item not in ('model_dir', 'train_files', 'hypertune_loss'):
             param_dict['algo'][item] = args_dict[item]
 
-    t = Trainer(train_data_path=args.train_files, model_path=args.model_dir, algo=XGBClassifier,
-                params=param_dict, hypertune_loss=args.hypertune_loss)
+    t = XGBClassifierTrainer(train_data_path=args.train_files, model_path=args.model_dir, algo=XGBClassifier,
+                             params=param_dict, hypertune_loss=args.hypertune_loss)
     t.run()
 
 
