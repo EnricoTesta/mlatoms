@@ -14,8 +14,8 @@ ATOMS:
   logisticRegression_classifier:
     docker_file: 'docker_logisticRegression_classifier'
     docker_entrypoint: 'entrypoint_logisticRegression_classifier.py'
-    image_name: 'classification_sklearn_logisticregression_dev'
-    image_tag: 'class_skl_logreg_dev'
+    image_name: 'classification_sklearn_logisticregression'
+    image_tag: 'class_skl_logreg'
     prediction_sources: '/mlatoms/predictionApps/sklearnApp/'
   xgb_classifier:
     docker_file: 'docker_xgb_classifier'
