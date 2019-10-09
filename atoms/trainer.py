@@ -145,7 +145,7 @@ class Trainer:
             counter += 1
         return PredefinedSplit(test_folds)
 
-    def generalization_assessment(self, x, y, cv, scoring, idx):
+    def generalization_assessment(self, x, y, cv, scoring):
         validation = {}
         pred = []
         for train, test in cv.split(x):  # split method works on integer-based row index. Ignores DataFrame index.
@@ -155,8 +155,8 @@ class Trainer:
             y_test_indexes = y.index[test]
             fit_model = self.fit(x.loc[x_train_indexes, :], y.loc[y_train_indexes])
 
-            # Get predictions
-            pred_test = DataFrame(self.predict(fit_model, x.loc[x_test_indexes, :]))
+            # Get predictions & keep original index link
+            pred_test = DataFrame(self.predict(fit_model, x.loc[x_test_indexes, :]), index=x_test_indexes)
 
             # Get scoring
             for key, scorer in scoring.items():
@@ -178,7 +178,6 @@ class Trainer:
 
         # Concatenate out-of-fold predictions
         pred = concat(pred, axis=0)
-        pred.reset_index(inplace=True, drop=True)
         predictions_col_names = []
         if pred.shape[1] == 1:
             predictions_col_names.append("value")  # either class labels or regression values
@@ -186,7 +185,7 @@ class Trainer:
             for i in range(pred.shape[1]):
                 predictions_col_names.append("probability_" + str(i))
         pred.columns = predictions_col_names
-        pred = concat([idx, pred], axis=1)  # TODO: ensure idx and pred rows are linked correctly
+        pred.reset_index(inplace=True)
 
         # Add validation info
         for key in validation.keys():
@@ -245,7 +244,7 @@ class Trainer:
         # Step 2 - Generalization Assessment
         cv = self.generate_folds(x, y)
         self.validation, self.predictions = self.generalization_assessment(x, y, cv=cv,
-                                                                           scoring=self._get_scoring_list(y), idx=idx)
+                                                                           scoring=self._get_scoring_list(y))
 
         # Step 4 - Fit model on entire train data
         self.trained_model = self.fit(x, y)
