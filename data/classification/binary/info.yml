@@ -1,6 +1,7 @@
 TARGET_COLUMN: 'target'
 ID_COLUMN: 'id'
 STRATIFICATION_COLUMN:
-  - ''
+  - 'num_strata'
+  - 'str_strata'
 USELESS_COLUMN:
   - 'no_use_col'
