@@ -22,7 +22,7 @@ from shutil import rmtree
 from pickle import dump
 from yaml import safe_load
 from pandas import read_csv, DataFrame, Series, concat
-from sklearn.model_selection import KFold, PredefinedSplit
+from sklearn.model_selection import StratifiedKFold, KFold, PredefinedSplit, cross_validate
 from sklearn import metrics
 
 
@@ -136,48 +136,38 @@ class Trainer:
             d['balanced'] = bool(yu_counts.max() == yu_counts.min())
         return d
 
-    def generate_folds(self, x, y):
-        # TODO: manage stratified version. Randomize by using shuffle but ensure indexes are not mixed up.
-        counter = 0
+    def generate_folds(self, x, y, stratification=None):
+        # TODO: manage shuffle without messing up with original DataFrame indexes
         test_folds = -np.ones(y.shape)
-        for _, test_index in KFold(n_splits=CV_FOLDS, shuffle=False).split(x):
-            test_folds[test_index] = counter
-            counter += 1
+        counter = 0
+        if stratification is None:
+            for _, test_index in KFold(n_splits=CV_FOLDS, shuffle=False).split(x):
+                test_folds[test_index] = counter
+                counter += 1
+        else:
+            # Build stratification variable
+            tmp_var = stratification.astype(str)
+            tmp_var['target'] = y.astype(str)
+            for column in tmp_var.columns:
+                try:
+                    strat_var += tmp_var[column]
+                except NameError:
+                    strat_var = tmp_var[column]
+            # Draw folds
+            for _, test_index in StratifiedKFold(n_splits=CV_FOLDS, shuffle=False).split(x, strat_var):
+                test_folds[test_index] = counter
+                counter += 1
         return PredefinedSplit(test_folds)
 
-    def generalization_assessment(self, x, y, cv, scoring):
-        validation = {}
-        pred = []
-        for train, test in cv.split(x):  # split method works on integer-based row index. Ignores DataFrame index.
-            x_train_indexes = x.index[train]
-            x_test_indexes = x.index[test]
-            y_train_indexes = y.index[train]
-            y_test_indexes = y.index[test]
-            fit_model = self.fit(x.loc[x_train_indexes, :], y.loc[y_train_indexes])
+    def generalization_assessment(self, x, y, cv):
+        validation = cross_validate(self.algo(**self.params['algo']), x, y=y, scoring=self._get_scoring_list(y),
+                                    return_train_score=True, return_estimator=True, n_jobs=-1, cv=cv)
+        estimators = validation.pop('estimator')
 
-            # Get predictions & keep original index link
-            pred_test = DataFrame(self.predict(fit_model, x.loc[x_test_indexes, :]), index=x_test_indexes)
-
-            # Get scoring
-            for key, scorer in scoring.items():
-                try:
-                    validation["train_{}".format(key)].append(scorer.__call__(fit_model, x.loc[x_train_indexes, :],
-                                                                              y.loc[y_train_indexes]))
-                except KeyError:
-                    validation["train_{}".format(key)] = [scorer.__call__(fit_model, x.loc[x_train_indexes, :],
-                                                                          y.loc[y_train_indexes])]
-                try:
-                    validation["test_{}".format(key)].append(scorer.__call__(fit_model, x.loc[x_test_indexes, :],
-                                                                             y.loc[y_test_indexes]))
-                except KeyError:
-                    validation["test_{}".format(key)] = [scorer.__call__(fit_model, x.loc[x_test_indexes, :],
-                                                                         y.loc[y_test_indexes])]
-
-            # Update output
-            pred.append(pred_test)
-
-        # Concatenate out-of-fold predictions
-        pred = concat(pred, axis=0)
+        # Get out-of-fold predictions
+        pred = concat([DataFrame(self.predict(fit_model, x.loc[x.index[cv.test_fold == idx], :]),
+                                 index=x.index[cv.test_fold == idx])
+                      for idx, fit_model in enumerate(estimators)], axis=0)
         predictions_col_names = []
         if pred.shape[1] == 1:
             predictions_col_names.append("value")  # either class labels or regression values
@@ -187,16 +177,13 @@ class Trainer:
         pred.columns = predictions_col_names
         pred.reset_index(inplace=True)
 
-        # Add validation info
-        for key in validation.keys():
-            validation[key] = Series(validation[key])
+        # Add info to validation
         validation['benchmark'] = int(self.algo.__name__ in BENCHMARK_ESTIMATORS)
         # Logloss correction
         validation['train_log_loss'] = -validation['train_log_loss']
         validation['test_log_loss'] = -validation['test_log_loss']
         # Algo name
         validation['algo'] = self.algo.__name__
-
         return validation, pred
 
     def run(self):
@@ -237,14 +224,18 @@ class Trainer:
         y = train_data[info["TARGET_COLUMN"]]
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS and y.apply(lambda x: x - int(x) != 0).any():  # THIS IS SLOW
             raise ValueError("Target variable for classification algorithms must be integer encoded.")
-        x = train_data.iloc[:, train_data.columns != info["TARGET_COLUMN"]]
+        x = train_data.iloc[:, np.isin(train_data.columns, [info["TARGET_COLUMN"]] + info["STRATIFICATION_COLUMN"],
+                                       invert=True)]
 
         self.problem_specs = self.infer_problem_specs(x, y)
 
         # Step 2 - Generalization Assessment
-        cv = self.generate_folds(x, y)
-        self.validation, self.predictions = self.generalization_assessment(x, y, cv=cv,
-                                                                           scoring=self._get_scoring_list(y))
+        if info["STRATIFICATION_COLUMN"][0] == '':  # TODO: fix this check with a more robust one
+            strat_df = None
+        else:
+            strat_df = train_data[info["STRATIFICATION_COLUMN"]]
+        cv = self.generate_folds(x, y, stratification=strat_df)
+        self.validation, self.predictions = self.generalization_assessment(x, y, cv=cv)
 
         # Step 4 - Fit model on entire train data
         self.trained_model = self.fit(x, y)
