@@ -4,31 +4,26 @@ ATOMS:
     docker_entrypoint: 'entrypoint_askl_classifier.py'
     image_name: 'classification_autosklearn'
     image_tag: 'class_askl'
-    prediction_sources: '/mlatoms/predictionApps/sklearnApp/'
   lgbm_classifier:
     docker_file: 'docker_lgbm_classifier'
     docker_entrypoint: 'entrypoint_lgbm_classifier.py'
     image_name: 'classification_lgbm'
     image_tag: 'class_lgbm'
-    prediction_sources: '/mlatoms/predictionApps/sklearnApp/'
   logisticRegression_classifier:
     docker_file: 'docker_logisticRegression_classifier'
     docker_entrypoint: 'entrypoint_logisticRegression_classifier.py'
     image_name: 'classification_sklearn_logisticregression'
     image_tag: 'class_skl_logreg'
-    prediction_sources: '/mlatoms/predictionApps/sklearnApp/'
   xgb_classifier:
     docker_file: 'docker_xgb_classifier'
     docker_entrypoint: 'entrypoint_xgb_classifier.py'
     image_name: 'classification_xgboost'
     image_tag: 'class_xgb'
-    prediction_sources: '/mlatoms/predictionApps/sklearnApp/'
   dummy_classifier:
     docker_file: 'docker_dummy_classifier'
     docker_entrypoint: 'entrypoint_dummy_classifier.py'
     image_name: 'classification_dummy'
     image_tag: 'class_dummy'
-    prediction_sources: '/mlatoms/predictionApps/sklearnApp/'
 SCORING:
   sklearn_scorer:
     docker_file: 'docker_sklearn_scorer'
