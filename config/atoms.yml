@@ -22,13 +22,13 @@ ATOMS:
   lda_classifier:
     docker_file: 'docker_LDA_classifier'
     docker_entrypoint: 'entrypoint_LDA_classifier.py'
-    image_name: 'classification_LDA'
-    image_tag: 'class_LDA'
+    image_name: 'classification_lda'
+    image_tag: 'class_lda'
   qda_classifier:
     docker_file: 'docker_QDA_classifier'
     docker_entrypoint: 'entrypoint_QDA_classifier.py'
-    image_name: 'classification_QDA'
-    image_tag: 'class_QDA'
+    image_name: 'classification_qda'
+    image_tag: 'class_qda'
   dummy_classifier:
     docker_file: 'docker_dummy_classifier'
     docker_entrypoint: 'entrypoint_dummy_classifier.py'
