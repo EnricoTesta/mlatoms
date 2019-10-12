@@ -8,7 +8,9 @@ with open(os.getcwd() + "/config/atoms.yml", 'r') as stream:
     data = safe_load(stream)
 
 successful_builds = []
+successful_image_uris = []
 failed_builds = []
+failed_image_uris = []
 for atom in data['ATOMS'].keys():
 
     # Notification
@@ -22,6 +24,7 @@ for atom in data['ATOMS'].keys():
     try:
         check_call(' && '.join(cmd), shell=True)
         successful_builds.append(atom)
+        successful_image_uris.append(get_image_uri('ATOMS', atom))
     except CalledProcessError as e:
         print("Failed to execute subprocess for container %s. Return code is %s." % (atom, e.returncode))
         failed_builds.append(atom)
@@ -42,6 +45,7 @@ for scorer in data['SCORING'].keys():
     try:
         check_call(' && '.join(cmd), shell=True)
         successful_builds.append(scorer)
+        successful_image_uris.append(get_image_uri('SCORING', scorer))
     except CalledProcessError as e:
         print("Failed to execute subprocess for container %s. Return code is %s." % (scorer, e.returncode))
         failed_builds.append(scorer)
@@ -53,7 +57,7 @@ for scorer in data['SCORING'].keys():
 print("")
 print("")
 print("--- BUILD SUMMARY ---")
-for item in successful_builds:
-    print(item + " - success")
-for item in failed_builds:
-    print(item + " - failed")
+for i, item in enumerate(successful_builds):
+    print("{} - {} - success".format(item, successful_image_uris[i]))
+for i, item in enumerate(failed_builds):
+    print("{} - {} - failed".format(item, successful_image_uris[i]))
