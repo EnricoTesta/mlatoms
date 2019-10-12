@@ -27,7 +27,8 @@ from sklearn import metrics
 
 
 CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
-                             'XGBClassifier', 'AutoSklearnClassifier', 'DummyClassifier']
+                             'XGBClassifier', 'AutoSklearnClassifier',
+                             'LinearDiscriminantAnalysis', 'QuadraticDiscriminantAnalysis', 'DummyClassifier']
 REGRESSION_ESTIMATORS = ['LinearRegression']
 BENCHMARK_ESTIMATORS = ['DummyClassifier']
 CV_FOLDS = 3
