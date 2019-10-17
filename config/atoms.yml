@@ -50,3 +50,14 @@ SCORING:
     docker_entrypoint: 'entrypoint_lgbm_scorer.py'
     image_name: 'scorer_lightgbm'
     image_tag: 'scorer_lgbm'
+PREPROCESS:
+  string2int_encoder:
+    docker_file: 'docker_string2int_encoder'
+    docker_entrypoint: 'entrypoint_string2int_encoder.py'
+    image_name: 'encoder_string2int'
+    image_tag: 'encoder_str2int'
+  onehot_encoder:
+    docker_file: 'docker_onehot_encoder'
+    docker_entrypoint: 'entrypoint_onehot_encoder.py'
+    image_name: 'encoder_onehot'
+    image_tag: 'encoder_onehot'
