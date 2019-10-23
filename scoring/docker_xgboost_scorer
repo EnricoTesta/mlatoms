@@ -30,6 +30,7 @@ ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
 # Copies the trainer code
 COPY entrypoint_xgb_scorer.py /root/mlatoms/entrypoint_xgb_scorer.py
 COPY scorer.py /root/mlatoms/scorer.py
+COPY atoms.py /root/mlatoms/atoms.py
 
 # Sets up the entry point to invoke the trainer.
 ENTRYPOINT ["python3", "mlatoms/entrypoint_xgb_scorer.py"]

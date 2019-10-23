@@ -28,6 +28,7 @@ ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
 # Copies the trainer code
 COPY entrypoint_string2int_encoder.py /root/mlatoms/entrypoint_string2int_encoder.py
 COPY preprocessor.py /root/mlatoms/preprocessor.py
+COPY atoms.py /root/mlatoms/atoms.py
 
 # Sets up the entry point to invoke the trainer.
 ENTRYPOINT ["python3", "mlatoms/entrypoint_string2int_encoder.py"]
