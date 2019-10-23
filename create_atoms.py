@@ -7,6 +7,8 @@ import os
 with open(os.getcwd() + "/config/atoms.yml", 'r') as stream:
     data = safe_load(stream)
 
+current_path = os.path.dirname(os.path.abspath(__file__))
+
 successful_builds = []
 successful_image_uris = []
 failed_builds = []
@@ -17,8 +19,9 @@ for atom in data['ATOMS'].keys():
     print("Building docker container for: %s" % atom)
 
     # Build shell command
-    cmd = ["cd atoms",
-           "sudo docker build -f " + data['ATOMS'][atom]['docker_file'] + " -t " + get_image_uri('ATOMS', atom) + " ./"]
+    cmd = ["sudo cp atoms.py {}/train/atoms.py".format(current_path), "cd train",
+           "sudo docker build -f " + data['ATOMS'][atom]['docker_file'] + " -t " + get_image_uri('ATOMS', atom) + " ./",
+           "sudo rm {}/train/atoms.py".format(current_path)]
 
     # Execute command
     try:
@@ -38,8 +41,9 @@ for scorer in data['SCORING'].keys():
     print("Building docker container for: %s" % scorer)
 
     # Build shell command
-    cmd = ["cd scoring",
-           "sudo docker build -f " + data['SCORING'][scorer]['docker_file'] + " -t " + get_image_uri('SCORING', scorer) + " ./"]
+    cmd = ["sudo cp atoms.py {}/score/atoms.py".format(current_path), "cd score",
+           "sudo docker build -f " + data['SCORING'][scorer]['docker_file'] + " -t " +
+           get_image_uri('SCORING', scorer) + " ./", "sudo rm {}/score/atoms.py".format(current_path)]
 
     # Execute command
     try:
@@ -59,9 +63,9 @@ for encoder in data["PREPROCESS"].keys():
     print("Building docker container for: %s" % encoder)
 
     # Build shell command
-    cmd = ["cd preprocess",
+    cmd = ["sudo cp atoms.py {}/preprocess/atoms.py".format(current_path), "cd preprocess",
            "sudo docker build -f " + data['PREPROCESS'][encoder]['docker_file'] + " -t " +
-           get_image_uri('PREPROCESS', encoder) + " ./"]
+           get_image_uri('PREPROCESS', encoder) + " ./", "sudo rm {}/preprocess/atoms.py".format(current_path)]
 
     # Execute command
     try:
