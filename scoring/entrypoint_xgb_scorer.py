@@ -1,7 +1,6 @@
 import argparse
 import xgboost
 from scorer import BatchPredictor
-from logging import getLogger
 
 
 class XGBoostBatchPredictor(BatchPredictor):
@@ -11,6 +10,7 @@ class XGBoostBatchPredictor(BatchPredictor):
 
     def model_predict_proba(self, preprocessed_input):
         return self._model.predict_proba(preprocessed_input, validate_features=False)
+
 
 def get_args():
     """Argument parser.
@@ -25,7 +25,7 @@ def get_args():
         help='The absolute path to fetch the model')
     parser.add_argument(
         '--score-dir',
-        default='/mlatoms/data/classification/binary/score/',
+        default='/mlatoms/data/classification/binary/numeric/score/',
         metavar='score_dir',
         help='The directory to fetch score data')
     parser.add_argument(
@@ -53,9 +53,10 @@ def main():
     for item in args_dict:
         param_dict[item] = args_dict[item]
 
-    p = XGBoostBatchPredictor.from_path(model_file_path=param_dict['model_file'], preprocess_file=None,
-                                        output_dir=param_dict['output_dir'], use_probabilities=param_dict['use_proba'])
-    p.predict(param_dict['score_dir'])
+    t = XGBoostBatchPredictor(data_path=param_dict['score_dir'], model_path=param_dict['model_file'],
+                              preprocess_path=None, use_probabilities=param_dict['use_proba'],
+                              output_dir=param_dict['output_dir'])
+    t.run()
 
 
 if __name__ == '__main__':

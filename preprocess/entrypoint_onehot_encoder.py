@@ -57,8 +57,7 @@ def main():
         if item not in ('model_dir', 'train_files'):
             param_dict['algo'][item] = args_dict[item]
 
-    t = Encoder(train_data_path=args.train_files, model_path=args.model_dir, algo=OneHotEncoder,
-                params=param_dict)
+    t = Encoder(data_path=args.train_files, model_path=args.model_dir, algo=OneHotEncoder, params=param_dict)
     t.run()
 
 

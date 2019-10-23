@@ -16,7 +16,7 @@ def get_args():
         help='The directory to store the model')
     parser.add_argument(
         '--train-files',
-        default='/mlatoms/data/classification/binary/',
+        default='/mlatoms/data/classification/binary/numeric/train/',
         metavar='train_files',
         help='The directory to fetch train data')
     parser.add_argument(
@@ -40,7 +40,7 @@ def main():
         if item not in ('model_dir', 'train_files', 'hypertune_loss'):
             param_dict['algo'][item] = args_dict[item]
 
-    t = Trainer(train_data_path=args.train_files, model_path=args.model_dir, algo=LinearDiscriminantAnalysis,
+    t = Trainer(data_path=args.train_files, model_path=args.model_dir, algo=LinearDiscriminantAnalysis,
                 params=param_dict, hypertune_loss=args.hypertune_loss)
     t.run()
 

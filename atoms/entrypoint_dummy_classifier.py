@@ -74,7 +74,7 @@ def main():
         if item not in ('model_dir', 'train_files'):
             param_dict['algo'][item] = args_dict[item]
 
-    t = Trainer(train_data_path=args.train_files, model_path=args.model_dir, algo=DummyClassifier,
+    t = Trainer(data_path=args.train_files, model_path=args.model_dir, algo=DummyClassifier,
                 params=param_dict)
     t.run()
 

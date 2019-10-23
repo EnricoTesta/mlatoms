@@ -80,7 +80,7 @@ def get_args():
     parser.add_argument(
         '--train-files',
         type=str,
-        default='/mlatoms/data/classification/binary/',
+        default='/mlatoms/data/classification/binary/numeric/train/',
         metavar='train_files',
         help='The directory to fetch train data')
     args = parser.parse_args()
@@ -147,7 +147,7 @@ def main():
         if item not in ('model_dir', 'train_files'):
             param_dict['algo'][item] = args_dict[item]
 
-    t = ASKLClassifierTrainer(train_data_path=args.train_files, model_path=args.model_dir,
+    t = ASKLClassifierTrainer(data_path=args.train_files, model_path=args.model_dir,
                               algo=AutoSklearnClassifier, params=param_dict)
     t.run()
 
