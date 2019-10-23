@@ -3,27 +3,22 @@ import pickle
 import subprocess
 import numpy as np
 from shutil import rmtree
-from yaml import safe_load
-from pandas import DataFrame, read_csv, concat
+from pandas import DataFrame
 from logging import getLogger
+from atoms import Atom
 
 logger = getLogger("sklearn_predictor")
 
 
-class BatchPredictor(object):
-    def __init__(self, model, preprocessor, output_dir, use_probabilities):
-        self._model = model
-        self._preprocessor = preprocessor
+class BatchPredictor(Atom):
+    def __init__(self, data_path, model_path, preprocess_path=None,
+                 algo=None, params=None, output_dir=None, use_probabilities=False):
+        super().__init__(data_path, model_path, algo, params)
+        self.preprocess_path = preprocess_path  # this is either a string or a list of strings
+        self._model = None
+        self._preprocessor = None
         self._output_dir = output_dir
         self._use_probabilities = use_probabilities
-
-    @staticmethod
-    def make_temporary_directory():
-        local_path = os.getcwd() + "/tmp/"
-        if os.path.exists(local_path):  # start from scratch
-            rmtree(local_path)
-        os.makedirs(local_path)
-        return local_path
 
     def default_preprocess(self, info, inputs):
         logger.info("Dropping useless columns. Fetching ids...")
@@ -32,7 +27,7 @@ class BatchPredictor(object):
                 inputs.drop(col, inplace=True, axis=1)
             except KeyError:
                 logger.warning("Tried to drop \"{}\" but it wasn't found in axis.".format(col))
-        ids = inputs.pop(info["ID_COLUMN"])
+        ids = inputs.index
         raw_data = np.asarray(inputs)
         return ids, raw_data
 
@@ -46,62 +41,78 @@ class BatchPredictor(object):
                 names.append('probability_' + str(i))  # classification setting
             return names
 
-    def model_predict(self, preprocessed_inputs):
-        """Universal prediction method. This is subclassed for each specific library/implementation."""
-        return preprocessed_inputs
-
-    def model_predict_proba(self, preprocessed_inputs):
-        """Universal prediction method. This is subclassed for each specific library/implementation."""
-        return preprocessed_inputs
-
-    def predict(self, score_dir):
-        # Assumption: score_dir contains a single info.yml file and multiple csv files
-
-        # Fetch files from score_dir
-        local_path = self.make_temporary_directory()
+    def retrieve_model(self):
+        # Fetch model & preprocess from GCS
         try:
-            os.system(' '.join(['gsutil -m', 'rsync', score_dir, local_path]))
+            os.system(' '.join(['gsutil -m', 'cp', self.model_path, self.local_path]))
         except:
-            raise ValueError("Unable to fetch score data.")
+            raise ValueError("Model file not found")
 
-        # Step 1 - Read info.yml
+        if self.preprocess_path is not None:
+            try:
+                if isinstance(self.preprocess_path, list):
+                    for item in self.preprocess_path:
+                        os.system(' '.join(['gsutil -m', 'cp', item, self.local_path]))
+                else:
+                    os.system(' '.join(['gsutil -m', 'cp', self.preprocess_path, self.local_path]))
+            except:
+                raise ValueError("Preprocess file not found")
+
+    def restore_model(self):
+        # Restore model
         try:
-            local_info_path = os.path.join(local_path, "info.yml")
-            with open(local_info_path, 'r') as stream:
-                info = safe_load(stream)
+            with open(os.path.join(self.local_path, self.model_path.split("/")[-1]), 'rb') as f:
+                self._model = pickle.load(f)
         except:
-            rmtree(local_path)
-            raise Exception("Unable to load info file.")
+            raise ValueError("Unable to unpickle model file")
 
-        # Step 2 - Read score data from csv
-        score_data_files = [f for f in os.listdir(local_path)
-                            if os.path.isfile(os.path.join(local_path, f)) and f.split(".")[-1] == 'csv']
+        # Restore preprocess
         try:
-            df_list = []
-            for f in score_data_files:
-                df_list.append(read_csv(filepath_or_buffer=os.path.join(local_path, f)))
-            inputs = concat(df_list, axis=0)
+            self._preprocessor = []
+            if isinstance(self.preprocess_path, list):
+                for item in self.preprocess_path:
+                    with open(os.path.join(self.local_path, item), 'rb') as f:
+                        self._preprocessor.append(pickle.load(f))  # TODO: ensure preprocess order
+            else:
+                with open(os.path.join(self.local_path, self.preprocess_path), 'rb') as f:
+                    self._preprocessor.append(pickle.load(f))
         except:
-            raise Exception("Unable to read data in memory.")
+            self._preprocessor = None
 
-        ids, raw_data = self.default_preprocess(info, inputs)
+    def model_predict_proba(self, inputs):
+        return inputs
 
-        # Step 3 - Preprocess
+    def model_predict(self, inputs):
+        return inputs
+
+    def run(self):
+
+        # Fetch data
+        self.retrieve_data()
+        self.read_info()
+        self.read_data()
+
+        # Load model
+        self.retrieve_model()
+        self.restore_model()
+
+        # Score model
+        ids, raw_data = self.default_preprocess(self.info, self.data)
+        preprocessed_inputs = raw_data
+
         try:
-            preprocessed_inputs = self._preprocessor.preprocess(raw_data)
+            for item in self._preprocessor:
+                preprocessed_inputs = item.preprocess(preprocessed_inputs)
         except:
             logger.info("No preprocessing applied")
-            preprocessed_inputs = raw_data
 
-        # Step 4 - Predict
-        tmp_file_path = os.path.join(local_path, 'results.csv')
+        tmp_file_path = os.path.join(self.local_path, 'results.csv')
         if self._use_probabilities:
             logger.info("Predicting probabilities...")
             probabilities = self.model_predict_proba(preprocessed_inputs)
             column_names = self.generate_column_names(probabilities)
             DataFrame(np.concatenate((ids.values.reshape(-1, 1), probabilities), axis=1),
                       columns=['id'] + column_names).to_csv(path_or_buf=tmp_file_path, index=False)
-
         else:
             logger.info("Predicting values...")
             outputs = self.model_predict(preprocessed_inputs)
@@ -109,46 +120,12 @@ class BatchPredictor(object):
             DataFrame(np.concatenate((ids.values.reshape(-1, 1), outputs), axis=1),
                       columns=['id'] + column_names).to_csv(path_or_buf=tmp_file_path, index=False)
 
+        # self.predictions = self.transform(self.trained_model, self.data).reset_index()  # TODO: verify index
+
         # Step 5 - Send results to GCS
         subprocess.check_call(['gsutil', 'cp', tmp_file_path,
                                os.path.join(self._output_dir, 'results.csv')])
 
-        # Step 6 - Clean-up
-        rmtree(local_path)
-
-    @classmethod
-    def from_path(cls, model_file_path, preprocess_file, output_dir, use_probabilities):
-
-        local_path = cls.make_temporary_directory()
-
-        # Fetch model & preprocess from GCS
-        try:
-            os.system(' '.join(['gsutil -m', 'cp', model_file_path, local_path]))
-        except:
-            raise ValueError("Model file not found")
-
-        if preprocess_file is not None:
-            try:
-                os.system(' '.join(['gsutil -m', 'cp', preprocess_file, local_path]))
-            except:
-                raise ValueError("Preprocess file not found")
-
-        # Restore objects
-        model_path = os.path.join(local_path, model_file_path.split("/")[-1])
-        try:
-            with open(model_path, 'rb') as f:
-                model = pickle.load(f)
-        except:
-            raise ValueError("Unable to unpickle model file")
-
-        try:
-            preprocessor_path = os.path.join(local_path, preprocess_file)
-            with open(preprocessor_path, 'rb') as f:
-                preprocessor = pickle.load(f)
-        except:
-            preprocessor = None
-
         # Clean-up
-        rmtree(local_path)
+        rmtree(self.local_path)
 
-        return cls(model, preprocessor, output_dir, use_probabilities)
