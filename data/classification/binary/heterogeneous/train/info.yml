@@ -1,7 +1,7 @@
 TARGET_COLUMN: 'isFraud'
 ID_COLUMN: 'TransactionID'
 STRATIFICATION_COLUMN:
-  - ''
+  - 'isFraud'
 USELESS_COLUMN:
   - ''
 CATEGORICAL_COLUMN:
