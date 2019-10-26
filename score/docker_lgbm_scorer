@@ -5,6 +5,7 @@ WORKDIR /root
 RUN apt-get update && \
     apt-get install -y cmake build-essential gcc g++ git wget && \
     pip install scikit-learn==0.21.3 pandas==0.23.4 && \
+    pip install imbalanced-learn==0.5.0 && \
     pip install pyYAML==5.1.2 && \
     git clone --recursive https://github.com/Microsoft/LightGBM && \
     cd LightGBM/python-package && \
