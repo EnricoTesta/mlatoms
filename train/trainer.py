@@ -14,7 +14,7 @@ CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
 REGRESSION_ESTIMATORS = ['LinearRegression']
 BENCHMARK_ESTIMATORS = ['DummyClassifier']
 CV_FOLDS = 3
-IMBALANCE_TOLERANCE = 0.01
+IMBALANCE_TOLERANCE = 0.20
 HYPERTUNE_LOSSES = {'binary_crossentropy': 'log_loss',
                     'categorical_crossentropy': 'log_loss',
                     'accuracy': 'accuracy'}
