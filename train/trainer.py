@@ -6,6 +6,7 @@ from sklearn.model_selection import StratifiedKFold, KFold, PredefinedSplit, cro
 from sklearn import metrics
 from imblearn.under_sampling import RandomUnderSampler
 from atoms import Atom
+from scipy.stats import spearmanr, pearsonr
 
 
 CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
@@ -18,6 +19,16 @@ IMBALANCE_TOLERANCE = 0.20
 HYPERTUNE_LOSSES = {'binary_crossentropy': 'log_loss',
                     'categorical_crossentropy': 'log_loss',
                     'accuracy': 'accuracy'}
+
+
+def spearman_corrcoef(y, y_pred):
+    r, _ = spearmanr(y, y_pred)
+    return r
+
+
+def pearson_corrcoef(y, y_pred):
+    r, _ = pearsonr(y, y_pred)
+    return r
 
 
 class ImbalancedPredefinedSplit(PredefinedSplit):
@@ -51,6 +62,8 @@ class Trainer(Atom):
             scoring_dict['accuracy'] = metrics.make_scorer(metrics.accuracy_score)
             scoring_dict['log_loss'] = metrics.make_scorer(metrics.log_loss, greater_is_better=False, needs_proba=True)
             scoring_dict['matthews_corr'] = metrics.make_scorer(metrics.matthews_corrcoef)
+            scoring_dict['spearman_corr'] = metrics.make_scorer(spearman_corrcoef, needs_proba=True)
+            scoring_dict['pearson_corr'] = metrics.make_scorer(pearson_corrcoef, needs_proba=True)
             if target.unique().shape[0] == 2:  # binary
                 scoring_dict['roc_auc'] = metrics.make_scorer(metrics.roc_auc_score)  # average: 'macro' is default
                 scoring_dict['hinge_loss'] = metrics.make_scorer(metrics.hinge_loss, greater_is_better=False)
