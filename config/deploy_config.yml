@@ -1,5 +1,0 @@
-GCP:
-  PROJECT_ID: 'universal-trail-249303'
-  BUCKET: 'my_ml_test_bucket'
-  CONTAINER_ROOT_URL: 'gcr.io'
-  CONTAINER_REGISTRY_SERVICE_ACCOUNT_JSON: '/home/x20260439/mlatoms/deploy/container_registry_ref_file.json'
