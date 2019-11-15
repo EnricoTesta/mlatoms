@@ -26,7 +26,7 @@ try:
     print("")
     print(cmd_2)
     print("")
-    check_call(cmd_2)
+    check_call(cmd)
 except CalledProcessError as e:
     print("Failed to obtain access rights to repository. Subprocess return code is %s" % e.returncode)
     print("Aborting...")
