@@ -1,6 +1,5 @@
 from yaml import safe_load
 from utils.docker_utils import get_image_uri
-from utils.gcp_utils import get_container_registry_service_account_json, get_registry_hostname
 from subprocess import check_call, CalledProcessError
 from config.constants import GLOBALS
 import os
