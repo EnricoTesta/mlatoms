@@ -9,6 +9,7 @@ with open(os.getcwd() + "/config/atoms.yml", 'r') as stream:
 
 successful_pushes = []
 failed_pushes = []
+successful_image_uris = []
 for atom_group in ['ATOMS', 'SCORING', 'PREPROCESS']:
     for atom in data[atom_group].keys():
 
@@ -22,6 +23,7 @@ for atom_group in ['ATOMS', 'SCORING', 'PREPROCESS']:
         try:
             check_call(cmd, shell=True)
             successful_pushes.append(atom)
+            successful_image_uris.append(get_image_uri(atom_group, atom))
         except CalledProcessError as e:
             print("Failed to execute subprocess for container %s. Return code is %s." % (atom, e.returncode))
             failed_pushes.append(atom)
@@ -30,7 +32,7 @@ for atom_group in ['ATOMS', 'SCORING', 'PREPROCESS']:
 print("")
 print("")
 print("--- PUSH SUMMARY ---")
-for item in successful_pushes:
-    print(item + " - success")
-for item in failed_pushes:
-    print(item + " - failed")
+for i, item in enumerate(successful_pushes):
+    print("{} - {} - success".format(item, successful_image_uris[i]))
+for i, item in enumerate(failed_pushes):
+    print("{} - {} - failed".format(item, successful_image_uris[i]))
