@@ -40,7 +40,7 @@ for atom in data['ATOMS'].keys():
     print("Pushing docker container for: %s" % atom)
 
     # Build shell command
-    cmd = "sudo docker push " + get_image_uri(atom)
+    cmd = "sudo docker push " + get_image_uri('ATOMS', atom)
 
     # Execute command
     try:
