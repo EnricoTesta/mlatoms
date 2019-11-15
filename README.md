@@ -6,6 +6,8 @@ The script will build one docker image for each preprocess, ML, and scoring
 algorithm in the library. Once docker images are built you are free to deploy those 
 in your favorite environment.
 
+You may run *python deploy_atoms.py* to deploy atoms to GCP Container Registry.
+
 - Make a universal training routine
 - Write one script for each algorithm (train)
 - Write one script to encapsule each algorithm in an appropriate
