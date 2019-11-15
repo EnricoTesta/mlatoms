@@ -2,6 +2,7 @@ from yaml import safe_load
 from utils.docker_utils import get_image_uri
 from utils.gcp_utils import get_container_registry_service_account_json, get_registry_hostname
 from subprocess import check_call, CalledProcessError
+from config.constants import GLOBALS
 import os
 
 # Read configuration file
@@ -17,12 +18,11 @@ try:
     # If you try to do it again it says
     "docker login requires at most 1 argument"
 
+    cmd = "cat " + GLOBALS["STORAGE_SA"] + \
+          " | docker login -u _json_key --password-stdin https://" + GLOBALS['CONTAINERS_ROOT_URL']
 
-    cmd = "cat " + get_container_registry_service_account_json() + \
-          " | docker login -u _json_key --password-stdin https://" + get_registry_hostname()
-
-    cmd_2 = 'docker login -u _json_key -p \"$(cat ' + get_container_registry_service_account_json() + \
-            ')\" https://' + get_registry_hostname()
+    cmd_2 = 'docker login -u _json_key -p \"$(cat ' + GLOBALS["STORAGE_SA"] + \
+            ')\" https://' + GLOBALS['CONTAINERS_ROOT_URL']
 
     print("")
     print(cmd_2)
