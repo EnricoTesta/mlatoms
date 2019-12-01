@@ -22,12 +22,36 @@ HYPERTUNE_LOSSES = {'binary_crossentropy': 'log_loss',
 
 
 def spearman_corrcoef(y, y_pred):
-    r, _ = spearmanr(y, y_pred)
+    try:
+        cols = y_pred.shape[1]
+    except IndexError:
+        cols = 1
+    if cols == 1:
+        col_list = [1]
+    else:
+        col_list = [i for i in range(cols)]
+    try:
+        y_pred_synthetic = np.matmul(y_pred, col_list).reshape(-1, 1) / cols
+    except ValueError:
+        y_pred_synthetic = np.matmul(y_pred.reshape(-1, 1), col_list).reshape(-1, 1) / cols
+    r, _ = spearmanr(y, y_pred_synthetic)
     return r
 
 
 def pearson_corrcoef(y, y_pred):
-    r, _ = pearsonr(y, y_pred)
+    try:
+        cols = y_pred.shape[1]
+    except IndexError:
+        cols = 1
+    if cols == 1:
+        col_list = [1]
+    else:
+        col_list = [i for i in range(cols)]
+    try:
+        y_pred_synthetic = np.matmul(y_pred, col_list).reshape(-1, 1) / cols
+    except ValueError:
+        y_pred_synthetic = np.matmul(y_pred.reshape(-1, 1), col_list).reshape(-1, 1) / cols
+    r, _ = pearsonr(y.ravel(), y_pred_synthetic.ravel())
     return r
 
 
