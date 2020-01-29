@@ -61,7 +61,7 @@ class Atom:
         if os.path.exists(self.local_path):  # start from scratch
             rmtree(self.local_path)
         os.makedirs(self.local_path)
-        os.system(' '.join(['gsutil -m', 'rsync', self.data_path, self.local_path]))  # fails if called by subprocess
+        os.system(' '.join(['gsutil -m', 'rsync -r', self.data_path, self.local_path]))  # fails if called by subprocess
 
     def read_info(self):
         try:
