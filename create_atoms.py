@@ -79,6 +79,29 @@ for encoder in data["PREPROCESS"].keys():
     # TODO: Test atom locally on sample data
     pass
 
+for encoder in data["POSTPROCESS"].keys():
+
+    # Notification
+    print("Building docker container for: %s" % encoder)
+
+    # Build shell command
+    cmd = ["sudo cp atoms.py {}/postprocess/atoms.py".format(current_path), "cd postprocess",
+           "sudo docker build -f " + data['POSTPROCESS'][encoder]['docker_file'] + " -t " +
+           get_image_uri('POSTPROCESS', encoder) + " ./", "sudo rm {}/postprocess/atoms.py".format(current_path)]
+
+    # Execute command
+    try:
+        check_call(' && '.join(cmd), shell=True)
+        successful_builds.append(encoder)
+        successful_image_uris.append(get_image_uri('POSTPROCESS', encoder))
+    except CalledProcessError as e:
+        print("Failed to execute subprocess for container %s. Return code is %s." % (encoder, e.returncode))
+        failed_builds.append(encoder)
+
+    # TODO: Test atom locally on sample data
+    pass
+
+
 # Summary
 print("")
 print("")

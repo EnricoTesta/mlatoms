@@ -10,7 +10,7 @@ with open(os.getcwd() + "/config/atoms.yml", 'r') as stream:
 successful_pushes = []
 failed_pushes = []
 successful_image_uris = []
-for atom_group in ['ATOMS', 'SCORING', 'PREPROCESS']:
+for atom_group in ['ATOMS', 'SCORING', 'PREPROCESS', 'POSTPROCESS']:
     for atom in data[atom_group].keys():
 
         # Notification
