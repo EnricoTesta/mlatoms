@@ -13,8 +13,8 @@ class Atom:
 
     def __init__(self, data_path=None, model_path=None, algo=None, params=None):
         # Input information
-        if data_path is None or model_path is None:
-            raise ValueError("Must set data_path and model_path")
+        if data_path is None:
+            raise ValueError("Must set data_path")
 
         self.data_path = data_path
         self.model_path = model_path
