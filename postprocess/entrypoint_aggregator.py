@@ -14,15 +14,15 @@ def get_args():
         metavar='method',
         help='Aggregation method')
     parser.add_argument(
-        '--model-dir',
-        default='/mlatoms/test/outputs',
-        metavar='model_dir',
-        help='The directory to store the object')
-    parser.add_argument(
-        '--train-files',
+        '--score-dir',
         default='/mlatoms/test/aggregatedir/',
-        metavar='train_files',
-        help='The directory to fetch train data')
+        metavar='score_dir',
+        help='The directory to fetch score data')
+    parser.add_argument(
+        '--output-dir',
+        default='/mlatoms/test/outputs/',
+        metavar='output_dir',
+        help='The directory to store output data')
 
     args = parser.parse_args()
     return args
@@ -41,12 +41,12 @@ def main():
     args_dict = vars(args)
 
     # Make param dict
-    param_dict = {'algo': {}, 'fit': {}}
+    param_dict = {}
     for item in args_dict:
-        if item not in ('model_dir', 'train_files'):
-            param_dict['algo'][item] = args_dict[item]
+        param_dict[item] = args_dict[item]
 
-    t = Aggregator(data_path=args.train_files, model_path=args.model_dir, algo=ScoreAggregator, params=param_dict)
+    t = Aggregator(data_path=param_dict['score_dir'], output_dir=param_dict['output_dir'],
+                   algo=ScoreAggregator, params=param_dict)
     t.run()
 
 

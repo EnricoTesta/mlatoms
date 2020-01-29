@@ -1,4 +1,5 @@
 from shutil import rmtree
+from subprocess import check_call
 from atoms import Atom
 from pandas import read_csv, concat
 import os
@@ -6,8 +7,9 @@ import os
 
 class Aggregator(Atom):
 
-    def __init__(self, data_path=None, model_path=None, algo=None, params=None):
-        super().__init__(data_path, model_path, algo, params)
+    def __init__(self, data_path=None, output_dir=None, algo=None, params=None):
+        super().__init__(data_path, None, algo, params)
+        self._output_dir = output_dir
 
     def read_data(self):
         try:
@@ -28,7 +30,7 @@ class Aggregator(Atom):
 
     def run(self):
 
-        if self.params['algo']['method'] != 'average':
+        if self.params['method'] != 'average':
             raise NotImplementedError("Only supported aggregation method is: 'average'")
 
         # Fetch data
@@ -40,8 +42,9 @@ class Aggregator(Atom):
         self.predictions = self.transform(self.trained_model, self.data).reset_index()  # TODO: verify index
 
         # Export
-        unique_id = self.generate_unique_id()
-        self.export_predictions(unique_id)
+        local_results_uri = os.path.join(self.local_path, 'results.csv')
+        self.predictions.to_csv(path_or_buf=local_results_uri, index=False)
+        check_call(['gsutil', 'cp', local_results_uri, self._output_dir])
 
         # Clean-up
         rmtree(self.local_path)
