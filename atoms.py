@@ -1,4 +1,5 @@
 import os
+import json
 import string
 import random
 import subprocess
@@ -56,11 +57,14 @@ class Atom:
         except:
             return estimator.predict(x)
 
-    def retrieve_data(self):
+    def make_local_path(self):
         self.local_path = os.getcwd() + "/tmp/"
         if os.path.exists(self.local_path):  # start from scratch
             rmtree(self.local_path)
         os.makedirs(self.local_path)
+
+    def retrieve_data(self):
+        self.make_local_path()
         os.system(' '.join(['gsutil -m', 'rsync -r', self.data_path, self.local_path]))  # fails if called by subprocess
 
     def read_info(self):
@@ -88,6 +92,12 @@ class Atom:
             self.data.set_index(self.info["ID_COLUMN"], inplace=True, drop=True)
         except:
             raise Exception("Unable to load data file.")
+
+    def export_json(self, json_object, json_file_name):
+        tmp_json_file = os.path.join(self.local_path, json_file_name)
+        with open(tmp_json_file, 'w') as f:
+            json.dump(json_object, f)
+        subprocess.check_call(['gsutil', 'cp', tmp_json_file, os.path.join(self.model_path, json_file_name)])
 
     def export_trained_model(self, unique_id):
         model_file_name = 'model_' + unique_id + '.pkl'
