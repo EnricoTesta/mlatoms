@@ -61,6 +61,11 @@ PREPROCESS:
     docker_entrypoint: 'entrypoint_onehot_encoder.py'
     image_name: 'encoder_onehot'
     image_tag: 'encoder_onehot'
+  data_evaluator:
+    docker_file: 'docker_data_evaluator'
+    docker_entrypoint: 'entrypoint_data_evaluator.py'
+    image_name: 'data_evaluator'
+    image_tag: 'data_evaluator'
 POSTPROCESS:
   aggregator:
     docker_file: 'docker_aggregator'
