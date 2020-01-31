@@ -1,0 +1,33 @@
+FROM python:3.5.7-buster
+WORKDIR /root
+
+# Installs google cloud sdk, this is mostly for using gsutil to export model.
+RUN pip install pandas==0.23.4 && \
+    pip install pyYAML==5.1.2 && \
+    pip install google-cloud-storage==1.25.0 && \
+    wget -nv \
+    https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz && \
+    mkdir /root/tools && \
+    tar xvzf google-cloud-sdk.tar.gz -C /root/tools && \
+    rm google-cloud-sdk.tar.gz && \
+    /root/tools/google-cloud-sdk/install.sh --usage-reporting=false \
+        --path-update=false --bash-completion=false \
+        --disable-installation-options && \
+    rm -rf /root/.config/* && \
+    ln -s /root/.config /config && \
+    # Remove the backup directory that gcloud creates
+    rm -rf /root/tools/google-cloud-sdk/.install/.backup && \
+    echo '[GoogleCompute]\nservice_account = default' > /etc/boto.cfg && \
+    mkdir /root/mlatoms && \
+    apt-get clean
+
+# Path configuration
+ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
+
+# Copies the trainer code
+COPY entrypoint_data_evaluator.py /root/mlatoms/entrypoint_data_evaluator.py
+COPY preprocessor.py /root/mlatoms/preprocessor.py
+COPY atoms.py /root/mlatoms/atoms.py
+
+# Sets up the entry point to invoke the trainer.
+ENTRYPOINT ["python3", "mlatoms/entrypoint_data_evaluator.py"]
