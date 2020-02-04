@@ -1,0 +1,5 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/quickstart-image:quickstart-image', './preprocess/docker_data_evaluator' ]
+images:
+- 'gcr.io/$PROJECT_ID/quickstart-image:quickstart-image'
