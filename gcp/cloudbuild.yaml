@@ -56,4 +56,4 @@ images:
   - 'gcr.io/$PROJECT_ID/classification_sklearn_logisticregression:class_skl_logreg'
   - 'gcr.io/$PROJECT_ID/classification_qda:class_qda'
   - 'gcr.io/$PROJECT_ID/classification_xgboost:class_xgb'
-timeout: 2000s
+timeout: 3600s
