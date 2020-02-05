@@ -27,8 +27,8 @@ RUN pip install scikit-learn==0.21.3 && \
 ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
 
 # Copies the trainer code
-COPY entrypoint_onehot_encoder.py /root/mlatoms/entrypoint_onehot_encoder.py
-COPY preprocessor.py /root/mlatoms/preprocessor.py
+COPY ./preprocess/entrypoint_onehot_encoder.py /root/mlatoms/entrypoint_onehot_encoder.py
+COPY ./preprocess/preprocessor.py /root/mlatoms/preprocessor.py
 COPY atoms.py /root/mlatoms/atoms.py
 
 # Sets up the entry point to invoke the trainer.

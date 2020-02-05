@@ -33,8 +33,8 @@ RUN apt-get update && \
 ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
 
 # Copies the trainer code
-COPY entrypoint_lgbm_scorer.py /root/mlatoms/entrypoint_lgbm_scorer.py
-COPY scorer.py /root/mlatoms/scorer.py
+COPY ./score/entrypoint_lgbm_scorer.py /root/mlatoms/entrypoint_lgbm_scorer.py
+COPY ./score/scorer.py /root/mlatoms/scorer.py
 COPY atoms.py /root/mlatoms/atoms.py
 
 # Sets up the entry point to invoke the trainer.

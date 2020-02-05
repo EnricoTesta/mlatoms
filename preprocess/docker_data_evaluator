@@ -25,8 +25,8 @@ RUN pip install pandas==0.23.4 && \
 ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
 
 # Copies the trainer code
-COPY entrypoint_data_evaluator.py /root/mlatoms/entrypoint_data_evaluator.py
-COPY preprocessor.py /root/mlatoms/preprocessor.py
+COPY ./preprocess/entrypoint_data_evaluator.py /root/mlatoms/entrypoint_data_evaluator.py
+COPY ./preprocess/preprocessor.py /root/mlatoms/preprocessor.py
 COPY atoms.py /root/mlatoms/atoms.py
 
 # Sets up the entry point to invoke the trainer.

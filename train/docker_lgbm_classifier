@@ -33,8 +33,8 @@ RUN apt-get update && \
 ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
 
 # Copies the trainer code
-COPY entrypoint_lgbm_classifier.py /root/mlatoms/entrypoint_lgbm_classifier.py
-COPY trainer.py /root/mlatoms/trainer.py
+COPY ./train/entrypoint_lgbm_classifier.py /root/mlatoms/entrypoint_lgbm_classifier.py
+COPY ./train/trainer.py /root/mlatoms/trainer.py
 COPY atoms.py /root/mlatoms/atoms.py
 
 # Sets up the entry point to invoke the trainer.

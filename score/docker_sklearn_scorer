@@ -27,8 +27,8 @@ RUN pip install scikit-learn==0.21.3 && \
 ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
 
 # Copies the trainer code
-COPY entrypoint_sklearn_scorer.py /root/mlatoms/entrypoint_sklearn_scorer.py
-COPY scorer.py /root/mlatoms/scorer.py
+COPY ./score/entrypoint_sklearn_scorer.py /root/mlatoms/entrypoint_sklearn_scorer.py
+COPY ./score/scorer.py /root/mlatoms/scorer.py
 COPY atoms.py /root/mlatoms/atoms.py
 
 # Sets up the entry point to invoke the trainer.
