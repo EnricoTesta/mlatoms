@@ -1,32 +1,46 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/aggregator:aggregator', '-f', './postprocess/docker_aggregator', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/data_evaluator:data_evaluator', '-f', './preprocess/docker_data_evaluator', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/encoder_onehot:encoder_onehot', '-f', './preprocess/docker_onehot_encoder', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/encoder_string2int:encoder_str2int', '-f', './preprocess/docker_string2int_encoder', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/scorer_lightgbm:scorer_lgbm', '-f', './score/docker_lgbm_scorer', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/scorer_sklearn:scorer_skl', '-f', './score/docker_sklearn_scorer', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/scorer_xgboost:scorer_xgb', '-f', './score/docker_xgboost_scorer', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/classification_autosklearn:class_askl', '-f', './train/docker_askl_classifier', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/classification_dummy:class_dummy', '-f', './train/docker_dummy_classifier', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/classification_lda:class_lda', '-f', './train/docker_LDA_classifier', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/classification_lgbm:class_lgbm', '-f', './train/docker_lgbm_classifier', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/classification_sklearn_logisticregression:class_skl_logreg', '-f', './train/docker_logisticRegression_classifier', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/classification_qda:class_qda', '-f', './train/docker_QDA_classifier', '.' ]
+  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/classification_xgboost:class_xgb', '-f', './train/docker_xgb_classifier', '.' ]
+  timeout: 600s
 images:
   - 'gcr.io/$PROJECT_ID/aggregator:aggregator'
   - 'gcr.io/$PROJECT_ID/data_evaluator:data_evaluator'
