@@ -30,9 +30,15 @@ def get_args():
 
 class ScoreAggregator:
 
-    @staticmethod
-    def transform(data):
-        return data.groupby(level=0).mean()
+    def __init__(self, original_index):
+        self.original_index = original_index
+
+    def transform(self, data):
+
+        data_avg = data.groupby(level=0).mean()
+        # Enforce original row ordering
+        return self.original_index.merge(data_avg, how='left',
+                                         left_on=self.original_index.columns[0], right_index=True)
 
 
 def main():

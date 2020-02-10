@@ -1,7 +1,7 @@
 from shutil import rmtree
 from subprocess import check_call
 from atoms import Atom
-from pandas import read_csv, concat
+from pandas import read_csv, concat, DataFrame
 import os
 
 
@@ -10,6 +10,7 @@ class Aggregator(Atom):
     def __init__(self, data_path=None, output_dir=None, algo=None, params=None):
         super().__init__(data_path, None, algo, params)
         self._output_dir = output_dir
+        self._original_index = None
 
     def read_data(self):
         try:
@@ -19,10 +20,12 @@ class Aggregator(Atom):
 
             if len(file_list) == 1:
                 self.data = read_csv(os.path.join(self.local_path, file_list[0]))
+                self._original_index = DataFrame(self.data.iloc[:, 0])  # Assume first column is index column
             else:
                 dfs = []
                 for file in file_list:
                     dfs.append(read_csv(os.path.join(self.local_path, file)))
+                self._original_index = DataFrame(dfs[0].iloc[:, 0])  # Assume first column is index & all files share same index
                 self.data = concat(dfs, axis=0)
             self.data.set_index(self.data.columns[0], inplace=True, drop=True)  # Assume first column is index column
         except:
@@ -38,8 +41,8 @@ class Aggregator(Atom):
         self.read_data()
 
         # Fit model
-        self.trained_model = self.algo()
-        self.predictions = self.transform(self.trained_model, self.data).reset_index()  # TODO: verify index
+        self.trained_model = self.algo(self._original_index)
+        self.predictions = self.transform(self.trained_model, self.data)
 
         # Export
         local_results_uri = os.path.join(self.local_path, 'results.csv')
