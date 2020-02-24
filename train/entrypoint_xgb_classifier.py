@@ -78,7 +78,7 @@ def get_args():
     parser.add_argument(
         '--train-files',
         type=str,
-        default='/mlatoms/data/classification/binary/numeric/train/',
+        default='/mlatoms/data/classification/binary/missing/train/',
         metavar='train_files',
         help='The directory to fetch train data')
     parser.add_argument(
