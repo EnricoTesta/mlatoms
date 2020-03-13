@@ -67,6 +67,34 @@ class Atom:
         self.make_local_path()
         os.system(' '.join(['gsutil -m', 'rsync -r', self.data_path, self.local_path]))  # fails if called by subprocess
 
+    def check_info(self):
+
+        required_keys = ["ID_COLUMN", "TARGET_COLUMN"]
+        optional_keys = ["USELESS_COLUMN", "STRATIFICATION_COLUMN"]
+
+        # Required keys
+        for key in required_keys:
+            if key not in self.info:
+                raise KeyError("You must provide {} in YAML information file".format(key))
+
+        # Data Types - Cannot use generic parameters with isinstance
+        if not isinstance(self.info["ID_COLUMN"], str):
+            raise TypeError("ID_COLUMN must be a string")
+        if not isinstance(self.info["TARGET_COLUMN"], str):
+            raise TypeError("TARGET_COLUMN must be a string")
+        if "USELESS_COLUMN" in self.info:  # list of strings
+            if not isinstance(self.info["USELESS_COLUMN"], list):
+                raise TypeError("USELESS_COLUMN must be a list")
+            for item in self.info["USELESS_COLUMN"]:
+                if not isinstance(item, str):
+                    raise TypeError("All elements of USELESS_COLUMN must be strings")
+        if "STRATIFICATION_COLUMN" in self.info:  # list of strings
+            if not isinstance(self.info["STRATIFICATION_COLUMN"], list):
+                raise TypeError("STRATIFICATION_COLUMN must be a list")
+            for item in self.info["STRATIFICATION_COLUMN"]:
+                if not isinstance(item, str):
+                    raise TypeError("All elements of STRATIFICATION_COLUMN must be strings")
+
     def read_info(self):
         try:
             file_list = [item for item in os.listdir(self.local_path)
@@ -77,7 +105,7 @@ class Atom:
             local_info_path = os.path.join(self.local_path, file_list[0])
             with open(local_info_path, 'r') as stream:
                 self.info = safe_load(stream)
-            # self.check_info()
+            self.check_info()
         except:
             rmtree(self.local_path)
             raise Exception("Unable to load info YAML.")
