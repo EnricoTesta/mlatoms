@@ -69,29 +69,34 @@ class Atom:
 
     def read_info(self):
         try:
-            local_info_path = os.path.join(self.local_path, "info.yml")
+            file_list = [item for item in os.listdir(self.local_path)
+                         if os.path.isfile(os.path.join(self.local_path, item)) and
+                         (item.split(".")[-1] == 'yaml' or item.split(".")[-1] == 'yml')]
+            if len(file_list) > 1:
+                raise ValueError("Found multiple YAML files. You must provide a single YAML.")
+            local_info_path = os.path.join(self.local_path, file_list[0])
             with open(local_info_path, 'r') as stream:
                 self.info = safe_load(stream)
+            # self.check_info()
         except:
             rmtree(self.local_path)
-            raise Exception("Unable to load info file.")
+            raise Exception("Unable to load info YAML.")
 
     def read_data(self):
         try:
             file_list = [item for item in os.listdir(self.local_path)
                          if os.path.isfile(os.path.join(self.local_path, item)) and item.split(".")[-1] == 'csv']
-            if len(file_list) == 1:
-                self.data = read_csv(os.path.join(self.local_path, file_list[0]),
-                                     usecols=lambda w: w not in self.info["USELESS_COLUMN"])
-            else:
-                dfs = []
-                for file in file_list:
+            dfs = []
+            for file in file_list:
+                if "USELESS_COLUMN" in self.info:
                     dfs.append(read_csv(os.path.join(self.local_path, file),
-                               usecols=lambda w: w not in self.info["USELESS_COLUMN"]))
-                self.data = concat(dfs, axis=0)
+                                        usecols=lambda w: w not in self.info["USELESS_COLUMN"]))
+                else:
+                    dfs.append(read_csv(os.path.join(self.local_path, file)))
+            self.data = concat(dfs, axis=0)
             self.data.set_index(self.info["ID_COLUMN"], inplace=True, drop=True)
         except:
-            raise Exception("Unable to load data file.")
+            raise Exception("Unable to load data csv.")
 
     def export_json(self, json_object, json_file_name):
         tmp_json_file = os.path.join(self.local_path, json_file_name)
