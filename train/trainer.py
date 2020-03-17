@@ -210,15 +210,19 @@ class Trainer(Atom):
         y = self.data[self.info["TARGET_COLUMN"]]
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS and y.apply(lambda x: x - int(x) != 0).any():  # THIS IS SLOW
             raise ValueError("Target variable for classification algorithms must be integer encoded.")
-        x = self.data.iloc[:, np.isin(self.data.columns, [self.info["TARGET_COLUMN"]] +
-                                      self.info["STRATIFICATION_COLUMN"], invert=True)]
+
+        try:
+            special_column_list = [self.info["TARGET_COLUMN"]] + self.info["STRATIFICATION_COLUMN"]
+        except KeyError:
+            special_column_list = [self.info["TARGET_COLUMN"]]
+        x = self.data.iloc[:, np.isin(self.data.columns, special_column_list, invert=True)]
         self.problem_specs = self.infer_problem_specs(x, y)
 
         # Generalization Assessment
-        if self.info["STRATIFICATION_COLUMN"][0] == '':  # TODO: fix this check with a more robust one
-            strat_df = None
-        else:
+        try:
             strat_df = self.data[self.info["STRATIFICATION_COLUMN"]]
+        except KeyError:
+            strat_df = None
         cv = self.generate_folds(x, y, stratification=strat_df)
         self.validation, self.predictions = self.generalization_assessment(x, y, cv=cv)
 
