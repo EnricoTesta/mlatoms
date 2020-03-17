@@ -22,7 +22,13 @@ class BatchPredictor(Atom):
 
     def default_preprocess(self, info, inputs):
         logger.info("Dropping useless columns. Fetching ids...")
-        for col in info["USELESS_COLUMN"] + info["STRATIFICATION_COLUMN"] + [info["TARGET_COLUMN"]]:
+        column_to_drop_list = [info["TARGET_COLUMN"]]
+        for key in ["USELESS_COLUMN", "STRATIFICATION_COLUMN"]:
+            try:
+                column_to_drop_list += info[key]
+            except KeyError:
+                pass
+        for col in column_to_drop_list:
             try:
                 inputs.drop(col, inplace=True, axis=1)
             except KeyError:
