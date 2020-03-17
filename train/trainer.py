@@ -15,7 +15,7 @@ CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
 REGRESSION_ESTIMATORS = ['LinearRegression']
 BENCHMARK_ESTIMATORS = ['DummyClassifier']
 CV_FOLDS = 3
-IMBALANCE_TOLERANCE = 0.20
+DEFAULT_IMBALANCE_TOLERANCE = 0.20
 HYPERTUNE_LOSSES = {'binary_crossentropy': 'log_loss',
                     'categorical_crossentropy': 'log_loss',
                     'accuracy': 'accuracy'}
@@ -53,6 +53,15 @@ def pearson_corrcoef(y, y_pred):
         y_pred_synthetic = np.matmul(y_pred.reshape(-1, 1), col_list).reshape(-1, 1) / cols
     r, _ = pearsonr(y.ravel(), y_pred_synthetic.ravel())
     return r
+
+
+def get_imbalance_tolerance(n_samples):
+    if n_samples < 1000:
+        return 0.01
+    elif n_samples < 100000:
+        return 0.05
+    else:
+        return DEFAULT_IMBALANCE_TOLERANCE
 
 
 class ImbalancedPredefinedSplit(PredefinedSplit):
@@ -138,7 +147,7 @@ class Trainer(Atom):
         if d['type'] == 'classification':
             d['binary'] = len(yu) == 2
             response_values = y.value_counts(normalize=True)
-            d['balanced'] = bool((response_values.max() - response_values.min())/2 <= IMBALANCE_TOLERANCE)
+            d['balanced'] = bool((response_values.max() - response_values.min())/2 <= get_imbalance_tolerance(d['n_samples']))
         return d
 
     def generate_folds(self, x, y, stratification=None):
@@ -219,9 +228,20 @@ class Trainer(Atom):
         self.problem_specs = self.infer_problem_specs(x, y)
 
         # Generalization Assessment
-        try:
-            strat_df = self.data[self.info["STRATIFICATION_COLUMN"]]
-        except KeyError:
+        force_stratify_on_target = False
+        if self.problem_specs["type"] == "classification" and not self.problem_specs["balanced"]:
+            force_stratify_on_target = True  # ensure you have all classes in each fold
+
+        stratification_column_list = []
+        if "STRATIFICATION_COLUMN" in self.info:
+            stratification_column_list += self.info["STRATIFICATION_COLUMN"]
+        if force_stratify_on_target:
+            stratification_column_list += [self.info["TARGET_COLUMN"]]
+        stratification_column_list = list(set(stratification_column_list))  # remove duplicates
+
+        if stratification_column_list:
+            strat_df = self.data[stratification_column_list]
+        else:
             strat_df = None
         cv = self.generate_folds(x, y, stratification=strat_df)
         self.validation, self.predictions = self.generalization_assessment(x, y, cv=cv)
