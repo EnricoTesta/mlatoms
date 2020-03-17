@@ -123,6 +123,8 @@ class Atom:
                     dfs.append(read_csv(os.path.join(self.local_path, file)))
             self.data = concat(dfs, axis=0)
             self.data.set_index(self.info["ID_COLUMN"], inplace=True, drop=True)
+            # TODO: directly read ordered columns!
+            # self.data.reindex(columns=sorted(self.data.columns), copy=False)  # this creates a copy
         except:
             raise Exception("Unable to load data csv.")
 
