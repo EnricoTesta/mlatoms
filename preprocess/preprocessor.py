@@ -66,7 +66,7 @@ class DataEvaluator(Atom):
             self.retrieve_data()
         else:
             raise NotImplementedError("Data size above 20 GB.")  # TODO: implement chunk retrieve
-        self.read_info()
+        self.read_info(fill=True)
         self.read_data()
 
         # Compute metadata
@@ -77,6 +77,21 @@ class DataEvaluator(Atom):
         self.metadata['column_names'] = list(self.data.columns)
         self.metadata['missing_data_rate'] = self.data.isna().mean(axis=0).to_dict()
         self.metadata['unique_value_count'] = self.data.nunique(dropna=True).to_dict()
+
+        self.metadata['column_types'] = {}
+        self.metadata['column_data_types'] = {}
+        self.metadata['category_encodings'] = {}
+        for col in self.data.columns:
+            if self.data.dtypes[col].name == 'object' or col in self.info["CATEGORICAL_COLUMN"]:
+                self.metadata['column_types'][col] = 'categorical'
+                self.metadata['column_data_types'][col] = 'category'
+                self.metadata['category_encodings'][col] = list(self.data[col].astype('category').dtype.categories)
+            elif col in self.info["ORDINAL_COLUMN"]:
+                self.metadata['column_types'][col] = 'ordinal'
+                self.metadata['column_data_types'][col] = 'float64'
+            else:
+                self.metadata['column_types'][col] = 'scale'
+                self.metadata['column_data_types'][col] = 'float64'
 
         # Export metadata
         self.export_json(self.metadata, 'metadata.json')
