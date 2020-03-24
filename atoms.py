@@ -1,5 +1,6 @@
 import os
 import json
+import numpy
 import string
 import random
 import subprocess
@@ -8,6 +9,10 @@ from shutil import rmtree
 from pickle import dump
 from yaml import safe_load
 from pandas import read_csv, DataFrame, concat
+from pandas.api.types import CategoricalDtype
+
+
+INFORMATION_OPTIONAL_KEYS = ["STRATIFICATION_COLUMN", "CATEGORICAL_COLUMN", "ORDINAL_COLUMN", "USELESS_COLUMN"]
 
 
 class Atom:
@@ -27,6 +32,7 @@ class Atom:
 
         # Aux properties
         self.local_path = None
+        self.metadata = None
         self.info = None
         self.data = None
 
@@ -67,10 +73,18 @@ class Atom:
         self.make_local_path()
         os.system(' '.join(['gsutil -m', 'rsync -r', self.data_path, self.local_path]))  # fails if called by subprocess
 
+    def retrieve_metadata(self):
+        # TODO: make more robust
+        model_path_shards = self.model_path.split("/")
+        if model_path_shards[0] == 'gs://':
+            metadata_path = '/'.join(model_path_shards[0:6] + ['METADATA'] + ['TRAIN'] + ['metadata.json'])
+        else:
+            metadata_path = self.model_path + '/metadata.json'
+        os.system(' '.join(['gsutil ', 'cp', metadata_path, self.local_path]))  # fails if called by subprocess
+
     def check_info(self):
 
         required_keys = ["ID_COLUMN", "TARGET_COLUMN"]
-        optional_keys = ["USELESS_COLUMN", "STRATIFICATION_COLUMN"]
 
         # Required keys
         for key in required_keys:
@@ -95,7 +109,7 @@ class Atom:
                 if not isinstance(item, str):
                     raise TypeError("All elements of STRATIFICATION_COLUMN must be strings")
 
-    def read_info(self):
+    def read_info(self, fill=False):
         try:
             file_list = [item for item in os.listdir(self.local_path)
                          if os.path.isfile(os.path.join(self.local_path, item)) and
@@ -106,25 +120,60 @@ class Atom:
             with open(local_info_path, 'r') as stream:
                 self.info = safe_load(stream)
             self.check_info()
+            if fill:
+                # Add all optional keys
+                for key in INFORMATION_OPTIONAL_KEYS:
+                    if key not in self.info:
+                        self.info[key] = []
         except:
             rmtree(self.local_path)
             raise Exception("Unable to load info YAML.")
 
-    def read_data(self):
+    def read_metadata(self):
+        file_list = [item for item in os.listdir(self.local_path)
+                     if os.path.isfile(os.path.join(self.local_path, item)) and
+                     (item.split(".")[-1] == 'json')]
+        if len(file_list) > 1:
+            raise ValueError("Found multiple JSON files. You must provide a single JSON.")
+        local_info_path = os.path.join(self.local_path, file_list[0])
+        with open(local_info_path, 'r') as stream:
+            self.metadata = safe_load(stream)
+
+    def _encode_categories_to_integers(self):
+        for col in self.data.columns:
+            if self.data[col].dtype.name == 'category':
+                self.data[col] = self.data[col].cat.codes
+
+    def _generate_data_type_dict(self):
+        try:
+            d = {}
+            for key in self.metadata['column_data_types']:
+                if self.metadata['column_data_types'][key] == 'category':
+                    d[key] = CategoricalDtype(self.metadata['category_encodings'][key], ordered=False)
+                elif self.metadata['column_data_types'][key] == 'float64':
+                    d[key] = numpy.float64
+            return d
+        except (TypeError, KeyError):
+            return None
+
+    def read_data(self, encode_cat_to_int=False):
         try:
             file_list = [item for item in os.listdir(self.local_path)
                          if os.path.isfile(os.path.join(self.local_path, item)) and item.split(".")[-1] == 'csv']
+            d = self._generate_data_type_dict()
             dfs = []
             for file in file_list:
                 if "USELESS_COLUMN" in self.info:
                     dfs.append(read_csv(os.path.join(self.local_path, file),
-                                        usecols=lambda w: w not in self.info["USELESS_COLUMN"]))
+                                        usecols=lambda w: w not in self.info["USELESS_COLUMN"], dtype=d))
                 else:
-                    dfs.append(read_csv(os.path.join(self.local_path, file)))
+                    dfs.append(read_csv(os.path.join(self.local_path, file), dtype=d))
             self.data = concat(dfs, axis=0)
             self.data.set_index(self.info["ID_COLUMN"], inplace=True, drop=True)
             # TODO: directly read ordered columns!
             # self.data.reindex(columns=sorted(self.data.columns), copy=False)  # this creates a copy
+            if encode_cat_to_int:
+                self._encode_categories_to_integers()
         except:
             raise Exception("Unable to load data csv.")
 
