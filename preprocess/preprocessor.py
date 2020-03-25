@@ -81,11 +81,13 @@ class DataEvaluator(Atom):
         self.metadata['column_types'] = {}
         self.metadata['column_data_types'] = {}
         self.metadata['category_encodings'] = {}
+        self.metadata['category_value_distribution'] = {}
         for col in self.data.columns:
             if self.data.dtypes[col].name == 'object' or col in self.info["CATEGORICAL_COLUMN"]:
                 self.metadata['column_types'][col] = 'categorical'
                 self.metadata['column_data_types'][col] = 'category'
                 self.metadata['category_encodings'][col] = list(self.data[col].astype('category').dtype.categories)
+                self.metadata['category_value_distribution'][col] = self.data[col].value_counts(normalize=True, dropna=False).to_dict()
             elif col in self.info["ORDINAL_COLUMN"]:
                 self.metadata['column_types'][col] = 'ordinal'
                 self.metadata['column_data_types'][col] = 'float64'
