@@ -76,7 +76,7 @@ class Atom:
     def retrieve_metadata(self):
         # TODO: make more robust
         model_path_shards = self.model_path.split("/")
-        if model_path_shards[0] == 'gs://':
+        if model_path_shards[0] == 'gs:':
             metadata_path = '/'.join(model_path_shards[0:6] + ['METADATA'] + ['TRAIN'] + ['metadata.json'])
         else:
             metadata_path = self.model_path + '/metadata.json'
