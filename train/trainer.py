@@ -216,7 +216,7 @@ class Trainer(Atom):
         self.retrieve_metadata()
         self.read_info()
         self.read_metadata()
-        self.read_data(encode_cat_to_int=True)
+        self.read_data()
 
         y = self.data[self.info["TARGET_COLUMN"]]
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS and y.apply(lambda x: x - int(x) != 0).any():  # THIS IS SLOW
