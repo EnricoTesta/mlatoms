@@ -8,7 +8,7 @@ from datetime import datetime as dt
 from shutil import rmtree
 from pickle import dump
 from yaml import safe_load
-from pandas import read_csv, DataFrame, concat
+from pandas import read_csv, DataFrame, concat, get_dummies
 from pandas.api.types import CategoricalDtype
 
 
@@ -139,10 +139,39 @@ class Atom:
         with open(local_info_path, 'r') as stream:
             self.metadata = safe_load(stream)
 
-    def _encode_categories_to_integers(self):
-        for col in self.data.columns:
+    def _get_columns_to_encode(self, features_flag, target_flag):
+        if features_flag is False and target_flag is False:
+            return []
+        columns_to_encode = [col for col in self.data.columns.tolist()
+                             if self.metadata['column_types'][col] == 'categorical']
+        if not features_flag:
+            columns_to_encode = [self.info["TARGET_COLUMN"]]
+        if not target_flag:
+            try:
+                columns_to_encode.remove(self.info["TARGET_COLUMN"])
+            except ValueError:
+                pass
+        return columns_to_encode
+
+    def _encode_to_integers(self, features_flag, target_flag):
+        for col in self._get_columns_to_encode(features_flag, target_flag):
             if self.data[col].dtype.name == 'category':
                 self.data[col] = self.data[col].cat.codes
+
+    def _encode_to_one_hot(self, features_flag, target_flag):
+        columns_to_encode = self._get_columns_to_encode(features_flag, target_flag)
+        try:
+            # Exclude stratification columns from 1-hot encoding
+            columns_to_encode = [col for col in columns_to_encode if col not in self.info["STRATIFICATION_COLUMN"]]
+        except KeyError:
+            pass
+        if columns_to_encode:
+            self.data = get_dummies(self.data, columns=columns_to_encode, dummy_na=True)  # can't do it in-place
+            try:
+                # target cannot be NaN
+                self.data.drop(columns='{}_nan'.format(self.info["TARGET_COLUMN"]), inplace=True)
+            except KeyError:
+                pass
 
     def _generate_data_type_dict(self):
         try:
@@ -156,7 +185,8 @@ class Atom:
         except (TypeError, KeyError):
             return None
 
-    def read_data(self, encode_cat_to_int=False):
+    def read_data(self, encode_features_to_int=False, encode_features_to_one_hot=False,
+                  encode_target_to_int=False, encode_target_to_one_hot=False):
         try:
             file_list = [item for item in os.listdir(self.local_path)
                          if os.path.isfile(os.path.join(self.local_path, item)) and item.split(".")[-1] == 'csv']
@@ -172,8 +202,11 @@ class Atom:
             self.data.set_index(self.info["ID_COLUMN"], inplace=True, drop=True)
             # TODO: directly read ordered columns!
             # self.data.reindex(columns=sorted(self.data.columns), copy=False)  # this creates a copy
-            if encode_cat_to_int:
-                self._encode_categories_to_integers()
+            if any([encode_features_to_int, encode_target_to_int, encode_features_to_one_hot,
+                    encode_target_to_one_hot]) and not self.metadata:
+                raise ValueError("Cannot encode without metadata.")
+            self._encode_to_integers(encode_features_to_int, encode_target_to_int)
+            self._encode_to_one_hot(encode_features_to_one_hot, encode_target_to_one_hot)
         except:
             raise Exception("Unable to load data csv.")
 
