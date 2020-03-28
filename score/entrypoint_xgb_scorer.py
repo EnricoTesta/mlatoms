@@ -49,11 +49,12 @@ def main():
     args_dict = vars(args)
 
     # Make param dict
-    param_dict = {}
+    param_dict = {'read': {'encode_features_to_int': False, 'encode_features_to_one_hot': True,
+                                                  'encode_target_to_int': False, 'encode_target_to_one_hot': False}}
     for item in args_dict:
         param_dict[item] = args_dict[item]
 
-    t = XGBoostBatchPredictor(data_path=param_dict['score_dir'], model_path=param_dict['model_file'],
+    t = XGBoostBatchPredictor(data_path=param_dict['score_dir'], model_path=param_dict['model_file'], params=param_dict,
                               preprocess_path=None, use_probabilities=param_dict['use_proba'],
                               output_dir=param_dict['output_dir'])
     t.run()

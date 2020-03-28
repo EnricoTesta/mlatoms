@@ -78,7 +78,7 @@ def get_args():
     parser.add_argument(
         '--train-files',
         type=str,
-        default='/mlatoms/data/classification/binary/missing/train/',
+        default='/mlatoms/data/classification/binary/ieee-fraud/train/',
         metavar='train_files',
         help='The directory to fetch train data')
     parser.add_argument(
@@ -97,7 +97,8 @@ def main():
     args_dict = vars(args)
 
     # Make param dict
-    param_dict = {'algo': {}, 'fit': {}}
+    param_dict = {'algo': {}, 'fit': {}, 'read': {'encode_features_to_int': False, 'encode_features_to_one_hot': True,
+                                                  'encode_target_to_int': True, 'encode_target_to_one_hot': False}}
     for item in args_dict:
         if item not in ('model_dir', 'train_files', 'hypertune_loss'):
             param_dict['algo'][item] = args_dict[item]

@@ -142,7 +142,7 @@ def main():
     args_dict['resampling_strategy_arguments'] = {'test_fold': pre_splits}
 
     # Make param dict
-    param_dict = {'algo': {}, 'fit': {}}
+    param_dict = {'algo': {}, 'fit': {}, 'read': {}}
     for item in args_dict:
         if item not in ('model_dir', 'train_files'):
             param_dict['algo'][item] = args_dict[item]

@@ -69,7 +69,8 @@ def main():
     args_dict = vars(args)
 
     # Make param dict
-    param_dict = {'algo': {}, 'fit': {}}
+    param_dict = {'algo': {}, 'fit': {}, 'read': {'encode_features_to_int': False, 'encode_features_to_one_hot': False,
+                                                  'encode_target_to_int': True, 'encode_target_to_one_hot': False}}
     for item in args_dict:
         if item not in ('model_dir', 'train_files'):
             param_dict['algo'][item] = args_dict[item]
