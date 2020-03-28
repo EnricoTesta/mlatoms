@@ -12,7 +12,8 @@ class Aggregator(Atom):
         self._output_dir = output_dir
         self._original_index = None
 
-    def read_data(self):
+    def read_data(self, encode_features_to_int=False, encode_features_to_one_hot=False,
+                  encode_target_to_int=False, encode_target_to_one_hot=False):
         try:
             file_list = list()
             for (dirpath, dirnames, filenames) in os.walk(self.local_path):
