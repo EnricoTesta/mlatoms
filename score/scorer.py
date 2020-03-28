@@ -95,8 +95,10 @@ class BatchPredictor(Atom):
 
         # Fetch data
         self.retrieve_data()
+        self.retrieve_metadata()
         self.read_info()
-        self.read_data()
+        self.read_metadata()
+        self.read_data(**self.params['read'])
 
         # Load model
         self.retrieve_model()
