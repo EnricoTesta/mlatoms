@@ -26,7 +26,7 @@ class Atom:
         self.model_path = model_path
         self.algo = algo  # this is a class
         if params is None:
-            self.params = {'algo': {}, 'fit': {}}
+            self.params = {'algo': {}, 'fit': {}, 'read': {}}
         else:
             self.params = params
 
@@ -75,11 +75,14 @@ class Atom:
 
     def retrieve_metadata(self):
         # TODO: make more robust
-        model_path_shards = self.model_path.split("/")
-        if model_path_shards[0] == 'gs:':
-            metadata_path = '/'.join(model_path_shards[0:6] + ['METADATA'] + ['TRAIN'] + ['metadata.json'])
-        else:
-            metadata_path = self.model_path + '/metadata.json'
+        try:
+            model_path_shards = self.model_path.split("/")
+            if model_path_shards[0] == 'gs:':
+                metadata_path = '/'.join(model_path_shards[0:6] + ['METADATA'] + ['TRAIN'] + ['metadata.json'])
+            else:
+                metadata_path = self.model_path + '/metadata.json'
+        except AttributeError:
+            metadata_path = '/mlatoms/test/modeldir/metadata.json'
         os.system(' '.join(['gsutil ', 'cp', metadata_path, self.local_path]))  # fails if called by subprocess
 
     def check_info(self):
@@ -188,6 +191,8 @@ class Atom:
     def read_data(self, encode_features_to_int=False, encode_features_to_one_hot=False,
                   encode_target_to_int=False, encode_target_to_one_hot=False):
         try:
+            # Read in-memory
+            # TODO: directly read ordered columns!
             file_list = [item for item in os.listdir(self.local_path)
                          if os.path.isfile(os.path.join(self.local_path, item)) and item.split(".")[-1] == 'csv']
             d = self._generate_data_type_dict()
@@ -200,13 +205,23 @@ class Atom:
                     dfs.append(read_csv(os.path.join(self.local_path, file), dtype=d))
             self.data = concat(dfs, axis=0)
             self.data.set_index(self.info["ID_COLUMN"], inplace=True, drop=True)
-            # TODO: directly read ordered columns!
             # self.data.reindex(columns=sorted(self.data.columns), copy=False)  # this creates a copy
+
+            # Encode
             if any([encode_features_to_int, encode_target_to_int, encode_features_to_one_hot,
                     encode_target_to_one_hot]) and not self.metadata:
                 raise ValueError("Cannot encode without metadata.")
             self._encode_to_integers(encode_features_to_int, encode_target_to_int)
             self._encode_to_one_hot(encode_features_to_one_hot, encode_target_to_one_hot)
+
+            # Clean column names (i.e. remove special chars and whitespaces)
+            clean_col_names = {}
+            special_chars = string.punctuation.replace('_', '')  # allow underscores (used also in 1-hot encoding)
+            translation_table = str.maketrans(special_chars, " " * len(special_chars))
+            for column in self.data.columns:
+                clean_col_names[column] = column.translate(translation_table).replace(" ", "")
+            self.data.rename(columns=clean_col_names, inplace=True)
+
         except:
             raise Exception("Unable to load data csv.")
 
