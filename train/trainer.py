@@ -1,7 +1,7 @@
 import numpy as np
 import hypertune
 from shutil import rmtree
-from pandas import DataFrame, concat
+from pandas import DataFrame, concat, unique
 from sklearn.model_selection import StratifiedKFold, KFold, PredefinedSplit, cross_validate
 from sklearn import metrics
 from imblearn.under_sampling import RandomUnderSampler
@@ -116,6 +116,34 @@ class Trainer(Atom):
             raise NotImplementedError
         return scoring_dict
 
+    def _get_metrics_dict(self, target):
+        metrics_dict = {}
+        if self.algo.__name__ in CLASSIFICATION_ESTIMATORS:
+
+            metrics_dict['accuracy'] = metrics.accuracy_score
+            metrics_dict['log_loss'] = metrics.log_loss
+            metrics_dict['matthews_corr'] = metrics.matthews_corrcoef
+            metrics_dict['spearman_corr'] = spearman_corrcoef
+            metrics_dict['pearson_corr'] = pearson_corrcoef
+            if target.unique().shape[0] == 2:  # binary
+                metrics_dict['roc_auc'] = metrics.roc_auc_score  # average: 'macro' is default
+                metrics_dict['hinge_loss'] = metrics.hinge_loss
+                metrics_dict['f1'] = metrics.f1_score
+                metrics_dict['precision'] = metrics.precision_score
+                metrics_dict['recall'] = metrics.recall_score
+                metrics_dict['fbeta'] = metrics.fbeta_score
+            else:  # multi-class
+                metrics_dict['f1'] = metrics.f1_score
+                metrics_dict['precision'] = metrics.precision_score
+                metrics_dict['recall'] = metrics.recall_score
+                metrics_dict['fbeta'] = metrics.fbeta_score
+
+        elif self.algo.__name__ in REGRESSION_ESTIMATORS:
+            raise NotImplementedError
+        else:
+            raise NotImplementedError
+        return metrics_dict
+
     def _get_score_method(self):
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS:
             return 'predict_proba'
@@ -182,6 +210,21 @@ class Trainer(Atom):
         else:
             return PredefinedSplit(test_folds)
 
+    @staticmethod
+    def _build_stratification_variable(stratification_df):
+        # Build stratification variable
+        tmp_var = stratification_df.astype(str)
+        stratification_variable_name = 'stratified_'
+        for column in tmp_var.columns:
+            try:
+                strat_var += tmp_var[column]
+            except NameError:
+                strat_var = tmp_var[column]
+            stratification_variable_name += column + '_'
+        stratification_df[stratification_variable_name[0:-1]] = strat_var
+        return DataFrame(stratification_df[stratification_variable_name[0:-1]]), \
+               unique(stratification_df[stratification_variable_name[0:-1]])
+
     def generalization_assessment(self, x, y, cv):
         validation = cross_validate(self.algo(**self.params['algo']), x, y=y, scoring=self._get_scoring_list(y),
                                     return_train_score=True, return_estimator=True, n_jobs=-1, cv=cv)
@@ -197,8 +240,40 @@ class Trainer(Atom):
         else:
             for i in range(pred.shape[1]):
                 predictions_col_names.append("probability_" + str(i))
+            pred['label'] = pred.idxmax(axis=1)  # add class label
+            predictions_col_names.append('label')
         pred.columns = predictions_col_names
-        pred.reset_index(inplace=True)
+
+        # Get stratified metrics
+        evaluation_metrics = self._get_metrics_dict(y)
+        stratified_validation = {'strata': [], 'strata_weight': []}
+        for metric_name in evaluation_metrics:
+            stratified_validation[metric_name] = []
+        if "STRATIFICATION_COLUMN" in self.info:
+            strat_df, strat_values = self._build_stratification_variable(self.data[self.info["STRATIFICATION_COLUMN"]])
+            strat_pred = strat_df.merge(pred, left_index=True, right_index=True)
+            strat_pred = strat_pred.merge(y, left_index=True, right_index=True, copy=False)
+
+            for value in strat_values:
+                relevant_data = strat_pred.loc[strat_pred[strat_pred.columns[0]] == value]
+                stratified_validation['strata'].append(value)
+                stratified_validation['strata_weight'].append(relevant_data.shape[0]/strat_pred.shape[0])
+                for name, metric in evaluation_metrics.items():
+                    try:
+                        if name == 'fbeta':
+                            metric_score = metric(relevant_data.iloc[:, -1].values, relevant_data['label'].values, 1)
+                        else:
+                            try:
+                                metric_score = metric(relevant_data.iloc[:, -1].values,
+                                                      relevant_data.iloc[:, 1:-2].values)  # y_true, y_pred
+                            except ValueError:  # metric does not support probabilities
+                                metric_score = metric(relevant_data.iloc[:, -1].values, relevant_data['label'].values)
+                    except:
+                        metric_score = np.nan
+                    stratified_validation[name].append(metric_score)
+
+            stratified_validation['algo'] = self.algo.__name__
+            stratified_validation['benchmark'] = int(self.algo.__name__ in BENCHMARK_ESTIMATORS)
 
         # Add info to validation
         validation['benchmark'] = int(self.algo.__name__ in BENCHMARK_ESTIMATORS)
@@ -207,7 +282,11 @@ class Trainer(Atom):
         validation['test_log_loss'] = -validation['test_log_loss']
         # Algo name
         validation['algo'] = self.algo.__name__
-        return validation, pred
+
+        # Reset prediction index
+        pred.reset_index(inplace=True)
+
+        return validation, stratified_validation, pred
 
     def run(self):
 
@@ -246,7 +325,7 @@ class Trainer(Atom):
         else:
             strat_df = None
         cv = self.generate_folds(x, y, stratification=strat_df)
-        self.validation, self.predictions = self.generalization_assessment(x, y, cv=cv)
+        self.validation, self.stratified_validation, self.predictions = self.generalization_assessment(x, y, cv=cv)
 
         # Fit model on entire train data
         if self.problem_specs["type"] == "classification" and not self.problem_specs["balanced"]:
@@ -259,9 +338,10 @@ class Trainer(Atom):
 
         # Export
         unique_id = self.generate_unique_id()
-        self.export_trained_model(unique_id)
-        self.export_predictions(unique_id)
-        self.export_validation(unique_id)
+        self.export_file(self.trained_model, 'model_' + unique_id + '.pkl')
+        self.export_file(self.predictions, 'predictions_' + unique_id + '.csv')
+        self.export_file(self.validation, 'info_' + unique_id + '.csv')
+        self.export_file(self.stratified_validation, 'stratified_info_' + unique_id + '.csv')
 
         # Clean-up
         rmtree(self.local_path)
