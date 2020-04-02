@@ -1,2 +1,4 @@
 ID_COLUMN: "TransactionID"
 TARGET_COLUMN: "isFraud"
+STRATIFICATION_COLUMN:
+  - "week"
