@@ -4,7 +4,7 @@ WORKDIR /root
 # Installs google cloud sdk, this is mostly for using gsutil to export model.
 RUN apt-get update && \
     apt-get -y install build-essential swig && \
-    pip install pandas==0.23.4 && \
+    pip install pandas==0.25.0 && \
     pip install imbalanced-learn==0.5.0 && \
     pip install pyYAML==5.1.2 && \
     curl https://raw.githubusercontent.com/automl/auto-sklearn/master/requirements.txt | xargs -n 1 -L 1 pip install && \
