@@ -22,8 +22,8 @@ class Encoder(Atom):
 
         # Export
         unique_id = self.generate_unique_id()
-        self.export_trained_model(unique_id)
-        self.export_predictions(unique_id)
+        self.export_file(self.trained_model, 'model_' + unique_id + '.pkl')
+        self.export_file(self.predictions, 'predictions_' + unique_id + '.csv')
 
         # Clean-up
         rmtree(self.local_path)
@@ -96,7 +96,7 @@ class DataEvaluator(Atom):
                 self.metadata['column_data_types'][col] = 'float64'
 
         # Export metadata
-        self.export_json(self.metadata, 'metadata.json')
+        self.export_file(self.metadata, 'metadata.json')
 
         # CLean-up
         rmtree(self.local_path)

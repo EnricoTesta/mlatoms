@@ -39,6 +39,7 @@ class Atom:
         # Output properties
         self.problem_specs = None
         self.validation = None
+        self.stratified_validation = None
         self.predictions = None
         self.trained_model = None
 
@@ -225,38 +226,41 @@ class Atom:
         except:
             raise Exception("Unable to load data csv.")
 
-    def export_json(self, json_object, json_file_name):
-        tmp_json_file = os.path.join(self.local_path, json_file_name)
-        with open(tmp_json_file, 'w') as f:
+    def export_file(self, serializable_object, file_name):
+
+        if serializable_object is None:
+            return
+
+        tmp_file_name = os.path.join(self.local_path, file_name)
+        if file_name.endswith('.json'):
+            self._export_json(serializable_object, tmp_file_name)
+        elif file_name.endswith('.pkl'):
+            self._export_pickle(serializable_object, tmp_file_name)
+        elif file_name.endswith('.csv'):
+            self._export_csv(serializable_object, tmp_file_name)
+        else:
+            raise NotImplementedError
+        subprocess.check_call(['gsutil', 'cp', tmp_file_name, os.path.join(self.model_path, file_name)])
+
+    @staticmethod
+    def _export_json(json_object, json_file_name):
+        with open(json_file_name, 'w') as f:
             json.dump(json_object, f)
-        subprocess.check_call(['gsutil', 'cp', tmp_json_file, os.path.join(self.model_path, json_file_name)])
 
-    def export_trained_model(self, unique_id):
-        model_file_name = 'model_' + unique_id + '.pkl'
-        tmp_model_file = os.path.join('/tmp/', model_file_name)
-        with open(tmp_model_file, 'wb') as f:
-            dump(self.trained_model, f)
-        subprocess.check_call(['gsutil', 'cp', tmp_model_file, os.path.join(self.model_path, model_file_name)])
+    @staticmethod
+    def _export_pickle(pickle_object, pickle_file_name):
+        with open(pickle_file_name, 'wb') as f:
+            dump(pickle_object, f)
 
-    def export_predictions(self, unique_id):
-        predictions_file_name = 'predictions_' + unique_id + '.csv'
-        if self.predictions is None:
+    @staticmethod
+    def _export_csv(csv_object, csv_file_name):
+        if isinstance(csv_object, dict):
+            csv_object = DataFrame.from_dict(csv_object)
+        elif isinstance(csv_object, DataFrame):
             pass
         else:
-            tmp_predictions_file = os.path.join('/tmp/', predictions_file_name)
-            self.predictions.to_csv(tmp_predictions_file, index=False)
-            subprocess.check_call(
-                ['gsutil', 'cp', tmp_predictions_file, os.path.join(self.model_path, predictions_file_name)])
-
-    def export_validation(self, unique_id):
-        validation_file_name = 'info_' + unique_id + '.csv'
-        if self.validation is None:
-            pass
-        else:
-            tmp_validation_file = os.path.join('/tmp/', validation_file_name)
-            DataFrame.from_dict(self.validation).to_csv(tmp_validation_file, index=False)
-            subprocess.check_call(['gsutil', 'cp', tmp_validation_file,
-                                   os.path.join(self.model_path, validation_file_name)])
+            raise NotImplementedError("csv_object must be either pandas DataFrame or dict")
+        csv_object.to_csv(csv_file_name, index=False)
 
     def run(self):
         """Subclass-specific task"""
