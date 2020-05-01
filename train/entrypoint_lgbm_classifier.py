@@ -30,9 +30,15 @@ def get_args():
     parser.add_argument(
         '--n_estimators',
         type=int,
-        default=100,
+        default=2000,
         metavar='n_estimators',
         help='Number of boosted trees to fit.')
+    parser.add_argument(
+        '--early_stopping_rounds',
+        type=int,
+        default=100,
+        metavar='early_stopping_rounds',
+        help='Maximum number of iterations allowed without metric improvement on validation data')
     parser.add_argument(
         '--learning_rate',
         type=float,
@@ -91,6 +97,41 @@ def get_args():
     return args
 
 
+class LGBMTrainer(Trainer):
+
+    @staticmethod
+    def get_fit_params_dict(x, y, train_idx, validation_idx):
+        return {'validation_data': [(x.iloc[validation_idx, :], y.iloc[validation_idx])]}
+
+    @staticmethod
+    def get_train_information(trained_model):
+        return {'n_estimators': trained_model._best_iteration}
+
+    def get_algo_params(self, **kwargs):
+        params = self.params['algo'].copy()
+        if kwargs['validation']:
+            pass
+        else:
+            # Replace with train_info whenever possible
+            train_info = kwargs['train_info'].max().to_dict()
+            for key, value in params.items():
+                if key in train_info.keys():
+                    params[key] = train_info[key]
+        return params
+
+    def get_fit_params(self, **kwargs):
+        # Account for early stopping
+        params = self.params['fit'].copy()
+        if kwargs['validation']:
+            params['eval_set'] = kwargs['validation_data']  # evaluated on the metric set by the model
+        else:
+            try:
+                params.pop('early_stopping_rounds')  # not needed in final training
+            except KeyError:
+                pass
+        return params
+
+
 def main():
     # Training settings
     args = get_args()
@@ -100,11 +141,13 @@ def main():
     param_dict = {'algo': {}, 'fit': {}, 'read': {'encode_features_to_int': False, 'encode_features_to_one_hot': True,
                                                   'encode_target_to_int': True, 'encode_target_to_one_hot': False}}
     for item in args_dict:
-        if item not in ('model_dir', 'train_files', 'hypertune_loss'):
+        if item not in ('model_dir', 'train_files', 'hypertune_loss', 'early_stopping_rounds'):
             param_dict['algo'][item] = args_dict[item]
+        elif item == 'early_stopping_rounds':
+            param_dict['fit'][item] = args_dict[item]  # must specify validation data and evaluation metric @ fit time
 
-    t = Trainer(data_path=args.train_files, model_path=args.model_dir, algo=LGBMClassifier,
-                params=param_dict, hypertune_loss=args.hypertune_loss)
+    t = LGBMTrainer(data_path=args.train_files, model_path=args.model_dir, algo=LGBMClassifier,
+                    params=param_dict, hypertune_loss=args.hypertune_loss)
     t.run()
 
 
