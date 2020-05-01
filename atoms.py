@@ -50,8 +50,14 @@ class Atom:
         suffix = ''.join((random.choice(available_characters) for _ in range(10)))
         return ts + suffix
 
-    def fit(self, x, y):
-        return self.algo(**self.params['algo']).fit(x, y)
+    def get_algo_params(self, **params_dict):
+        return self.params['algo']  # kwargs ignored
+
+    def get_fit_params(self, **params_dict):
+        return self.params['fit']  # kwargs ignored
+
+    def fit(self, x, y, algo_params, fit_params):
+        return self.algo(**algo_params).fit(x, y, **fit_params)
 
     @staticmethod
     def transform(estimator, x):
