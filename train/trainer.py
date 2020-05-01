@@ -2,7 +2,7 @@ import numpy as np
 import hypertune
 from shutil import rmtree
 from pandas import DataFrame, concat, unique
-from sklearn.model_selection import StratifiedKFold, KFold, PredefinedSplit, cross_validate
+from validation import KFoldValidationSchema, StratifiedKFoldValidationSchema
 from sklearn import metrics
 from imblearn.under_sampling import RandomUnderSampler
 from atoms import Atom
@@ -64,21 +64,6 @@ def get_imbalance_tolerance(n_samples):
         return DEFAULT_IMBALANCE_TOLERANCE
 
 
-class ImbalancedPredefinedSplit(PredefinedSplit):
-
-    def __init__(self, test_fold=None):
-        super().__init__(test_fold)
-
-    def split(self, X=None, y=None, groups=None):
-        rus = RandomUnderSampler(sampling_strategy='not minority', replacement=False)
-        for original_train_index, original_test_index in super(ImbalancedPredefinedSplit, self).split(X, y, groups):
-            resampled_train_index, _ = rus.fit_resample(X.index[original_train_index].values.reshape(-1, 1),
-                                                        y.iloc[original_train_index])
-            resampled_mask = [item in resampled_train_index for item in X.index]
-            resampled_train_rows = [i for i, item in enumerate(resampled_mask) if item is True]
-            yield np.asarray(resampled_train_rows), original_test_index
-
-
 class Trainer(Atom):
     """How do I know what trials I'm in??? It would be of great help in using HyperTune and setting model name.
     --> Can be found in TrainingOutput..."""
@@ -87,34 +72,6 @@ class Trainer(Atom):
         super().__init__(data_path, model_path, algo, params)
         self.hypertune_loss = hypertune_loss
         self.problem_specs = None
-
-    def _get_scoring_list(self, target):
-        scoring_dict = {}
-        if self.algo.__name__ in CLASSIFICATION_ESTIMATORS:
-
-            scoring_dict['accuracy'] = metrics.make_scorer(metrics.accuracy_score)
-            scoring_dict['log_loss'] = metrics.make_scorer(metrics.log_loss, greater_is_better=False, needs_proba=True)
-            scoring_dict['matthews_corr'] = metrics.make_scorer(metrics.matthews_corrcoef)
-            scoring_dict['spearman_corr'] = metrics.make_scorer(spearman_corrcoef, needs_proba=True)
-            scoring_dict['pearson_corr'] = metrics.make_scorer(pearson_corrcoef, needs_proba=True)
-            if target.unique().shape[0] == 2:  # binary
-                scoring_dict['roc_auc'] = metrics.make_scorer(metrics.roc_auc_score)  # average: 'macro' is default
-                scoring_dict['hinge_loss'] = metrics.make_scorer(metrics.hinge_loss, greater_is_better=False)
-                scoring_dict['f1'] = metrics.make_scorer(metrics.f1_score)
-                scoring_dict['precision'] = metrics.make_scorer(metrics.precision_score)
-                scoring_dict['recall'] = metrics.make_scorer(metrics.recall_score)
-                scoring_dict['fbeta'] = metrics.make_scorer(metrics.fbeta_score, beta=1, average='binary')
-            else:  # multi-class
-                scoring_dict['f1'] = metrics.make_scorer(metrics.f1_score, average='macro')
-                scoring_dict['precision'] = metrics.make_scorer(metrics.precision_score, average='macro')
-                scoring_dict['recall'] = metrics.make_scorer(metrics.recall_score, average='macro')
-                scoring_dict['fbeta'] = metrics.make_scorer(metrics.fbeta_score, beta=1, average='macro')
-
-        elif self.algo.__name__ in REGRESSION_ESTIMATORS:
-            raise NotImplementedError
-        else:
-            raise NotImplementedError
-        return scoring_dict
 
     def _get_metrics_dict(self, target):
         metrics_dict = {}
@@ -178,38 +135,6 @@ class Trainer(Atom):
             d['balanced'] = bool((response_values.max() - response_values.min())/2 <= get_imbalance_tolerance(d['n_samples']))
         return d
 
-    def generate_folds(self, x, y, stratification=None):
-        # TODO: manage shuffle without messing up with original DataFrame indexes
-        test_folds = -np.ones(y.shape)
-        counter = 0
-
-        # Stratification
-        if stratification is None:
-            for _, test_index in KFold(n_splits=CV_FOLDS, shuffle=False).split(x):
-                test_folds[test_index] = counter
-                counter += 1
-        else:
-            # Build stratification variable
-            tmp_var = stratification.astype(str)
-            for column in tmp_var.columns:
-                try:
-                    strat_var += tmp_var[column]
-                except NameError:
-                    strat_var = tmp_var[column]
-            # Draw folds
-            for _, test_index in StratifiedKFold(n_splits=CV_FOLDS, shuffle=False).split(x, strat_var):
-                test_folds[test_index] = counter
-                counter += 1
-
-        # Imbalance
-        if self.problem_specs["type"] == "classification":
-            if self.problem_specs["balanced"]:
-                return PredefinedSplit(test_folds)
-            else:
-                return ImbalancedPredefinedSplit(test_folds)
-        else:
-            return PredefinedSplit(test_folds)
-
     @staticmethod
     def _build_stratification_variable(stratification_df):
         # Build stratification variable
@@ -225,15 +150,96 @@ class Trainer(Atom):
         return DataFrame(stratification_df[stratification_variable_name[0:-1]]), \
                unique(stratification_df[stratification_variable_name[0:-1]])
 
-    def generalization_assessment(self, x, y, cv):
-        validation = cross_validate(self.algo(**self.params['algo']), x, y=y, scoring=self._get_scoring_list(y),
-                                    return_train_score=True, return_estimator=True, n_jobs=-1, cv=cv)
-        estimators = validation.pop('estimator')
+    def generate_validation_schemas(self, stratification):
+        # TODO: move this to validation.py as a function
+        schemas = {}
+        if stratification is None:
+            schemas['KFold'] = {'schema': KFoldValidationSchema(params={'n_splits': CV_FOLDS, 'shuffle': False}),
+                                'kwargs': {}}
+        else:
+            strat_var, _ = self._build_stratification_variable(stratification)
+            schemas['StratifiedKFold'] = {'schema': StratifiedKFoldValidationSchema(params={'n_splits': CV_FOLDS,
+                                                                                            'shuffle': False}),
+                                          'kwargs': {'stratification_variable': strat_var}}
+        for key, value in schemas.items():
+            value['kwargs']['balanced'] = self.problem_specs['balanced']
+        return schemas
+
+    @staticmethod
+    def get_fit_params_dict(x, y, train_idx, validation_idx):
+        return {}  # implemented only in subclasses if needed
+
+    @staticmethod
+    def get_train_information(trained_model):
+        return {}  # implemented only in subclasses if needed
+
+    def validation_assessment(self, x, y, validation_schemas):
+        """
+        :param x: Features DataFrame
+        :param y: Response Series
+        :param validation_schemas: dict of dicts (ValidationSchema objects + dict of kwargs)
+        :return: validation, stratified_validation, pred
+        """
+        validation_df_list = []
+        stratified_validation_df_list = []
+        pred_df_list = []
+        train_information_df_list = []
+        metrics_dict = self._get_metrics_dict(y)
+        for key, item in validation_schemas.items():
+
+            # Evaluate validation schema
+            for train_idx, validation_idx in item['schema'].split(x, y, **item['kwargs']):  # sklearn-like generators
+                trained_model = self.fit(x.iloc[train_idx, :], y.iloc[train_idx], self.get_algo_params(validation=True),
+                                         self.get_fit_params(**{**self.get_fit_params_dict(x, y, train_idx,
+                                                                                           validation_idx),
+                                                                **{'validation': True}}))
+                validation, stratified_validation, pred = self.get_model_performance(trained_model,
+                                                                                     x.iloc[validation_idx, :],
+                                                                                     y.iloc[validation_idx],
+                                                                                     metrics_dict)
+                validation_df = DataFrame(validation, index=[0])
+                validation_df['validation_schema'] = key
+                validation_df_list.append(validation_df)
+
+                stratified_validation_df = DataFrame(stratified_validation)
+                stratified_validation_df['validation_schema'] = key
+                stratified_validation_df_list.append(stratified_validation_df)
+
+                pred['validation_schema'] = key
+                pred_df_list.append(pred)
+
+                train_information_df = DataFrame(self.get_train_information(trained_model), index=[0])
+                train_information_df['validation_schema'] = key
+                train_information_df_list.append(train_information_df)
+
+        return concat(validation_df_list, axis=0),\
+               concat(stratified_validation_df_list, axis=0),\
+               concat(pred_df_list, axis=0),\
+               concat(train_information_df_list, axis=0)
+
+    def _compute_metrics(self, labeled_predictions, metrics_dict):
+        d = {}
+        for name, metric in metrics_dict.items():
+            try:
+                if name == 'fbeta':
+                    metric_score = metric(labeled_predictions.iloc[:, -1].values, labeled_predictions['label'].values, 1)
+                else:
+                    try:
+                        metric_score = metric(labeled_predictions.iloc[:, -1].values,
+                                              labeled_predictions.iloc[:, 1:-2].values)  # y_true, y_pred
+                    except ValueError:  # metric does not support probabilities
+                        metric_score = metric(labeled_predictions.iloc[:, -1].values, labeled_predictions['label'].values)
+            except:
+                metric_score = np.nan
+            d['test_' + name] = metric_score
+        d['benchmark'] = int(self.algo.__name__ in BENCHMARK_ESTIMATORS)
+        d['algo'] = self.algo.__name__
+        return d
+
+    def get_model_performance(self, trained_model, x, y, metrics_dict):
 
         # Get out-of-fold predictions
-        pred = concat([DataFrame(self.predict(fit_model, x.loc[x.index[cv.test_fold == idx], :]),
-                                 index=x.index[cv.test_fold == idx])
-                      for idx, fit_model in enumerate(estimators)], axis=0)
+        pred = DataFrame(self.predict(trained_model, x), index=x.index)
         predictions_col_names = []
         if pred.shape[1] == 1:
             predictions_col_names.append("value")  # either class labels or regression values
@@ -244,11 +250,14 @@ class Trainer(Atom):
             predictions_col_names.append('label')
         pred.columns = predictions_col_names
 
+        # Get metrics
+        labeled_pred = pred.merge(y, left_index=True, right_index=True, copy=False)
+        validation = self._compute_metrics(labeled_predictions=labeled_pred, metrics_dict=metrics_dict)
+
         # Get stratified metrics
-        evaluation_metrics = self._get_metrics_dict(y)
-        stratified_validation = {'strata': [], 'strata_weight': []}
-        for metric_name in evaluation_metrics:
-            stratified_validation[metric_name] = []
+        stratified_validation = {'strata': [], 'strata_weight': [], 'benchmark': [], 'algo': []}
+        for metric_name in metrics_dict:
+            stratified_validation['test_' + metric_name] = []
         if "STRATIFICATION_COLUMN" in self.info:
             strat_df, strat_values = self._build_stratification_variable(self.data[self.info["STRATIFICATION_COLUMN"]])
             strat_pred = strat_df.merge(pred, left_index=True, right_index=True)
@@ -257,31 +266,10 @@ class Trainer(Atom):
             for value in strat_values:
                 relevant_data = strat_pred.loc[strat_pred[strat_pred.columns[0]] == value]
                 stratified_validation['strata'].append(value)
-                stratified_validation['strata_weight'].append(relevant_data.shape[0]/strat_pred.shape[0])
-                for name, metric in evaluation_metrics.items():
-                    try:
-                        if name == 'fbeta':
-                            metric_score = metric(relevant_data.iloc[:, -1].values, relevant_data['label'].values, 1)
-                        else:
-                            try:
-                                metric_score = metric(relevant_data.iloc[:, -1].values,
-                                                      relevant_data.iloc[:, 1:-2].values)  # y_true, y_pred
-                            except ValueError:  # metric does not support probabilities
-                                metric_score = metric(relevant_data.iloc[:, -1].values, relevant_data['label'].values)
-                    except:
-                        metric_score = np.nan
-                    stratified_validation[name].append(metric_score)
-
-            stratified_validation['algo'] = self.algo.__name__
-            stratified_validation['benchmark'] = int(self.algo.__name__ in BENCHMARK_ESTIMATORS)
-
-        # Add info to validation
-        validation['benchmark'] = int(self.algo.__name__ in BENCHMARK_ESTIMATORS)
-        # Logloss correction
-        validation['train_log_loss'] = -validation['train_log_loss']
-        validation['test_log_loss'] = -validation['test_log_loss']
-        # Algo name
-        validation['algo'] = self.algo.__name__
+                stratified_validation['strata_weight'].append(relevant_data.shape[0] / strat_pred.shape[0])
+                d = self._compute_metrics(labeled_predictions=relevant_data, metrics_dict=metrics_dict)
+                for k, v in d.items():
+                    stratified_validation[k].append(v)
 
         # Reset prediction index
         pred.reset_index(inplace=True)
@@ -324,17 +312,22 @@ class Trainer(Atom):
             strat_df = self.data[stratification_column_list]
         else:
             strat_df = None
-        cv = self.generate_folds(x, y, stratification=strat_df)
-        self.validation, self.stratified_validation, self.predictions = self.generalization_assessment(x, y, cv=cv)
+
+        schemas = self.generate_validation_schemas(strat_df)
+        self.validation, self.stratified_validation, self.predictions, train_info = self.validation_assessment(x, y, schemas)
 
         # Fit model on entire train data
         if self.problem_specs["type"] == "classification" and not self.problem_specs["balanced"]:
             rus = RandomUnderSampler(sampling_strategy='not minority', replacement=False)
             resampled_index, _ = rus.fit_resample(x.index.values.reshape(-1, 1), y)
             resampled_index = resampled_index.flatten()
-            self.trained_model = self.fit(x.loc[resampled_index, :], y.loc[resampled_index])
+            self.trained_model = self.fit(x.loc[resampled_index, :],
+                                          y.loc[resampled_index],
+                                          self.get_algo_params(validation=False, train_info=train_info),
+                                          self.get_fit_params(validation=False))
         else:
-            self.trained_model = self.fit(x, y)
+            self.trained_model = self.fit(x, y, self.get_algo_params(validation=False, train_info=train_info),
+                                          self.get_fit_params(validation=False))
 
         # Export
         unique_id = self.generate_unique_id()
