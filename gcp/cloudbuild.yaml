@@ -6,12 +6,6 @@ steps:
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/data_evaluator:data_evaluator', '-f', './preprocess/docker_data_evaluator', '.' ]
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/encoder_onehot:encoder_onehot', '-f', './preprocess/docker_onehot_encoder', '.' ]
-  timeout: 600s
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/encoder_string2int:encoder_str2int', '-f', './preprocess/docker_string2int_encoder', '.' ]
-  timeout: 600s
-- name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/scorer_lightgbm:scorer_lgbm', '-f', './score/docker_lgbm_scorer', '.' ]
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
