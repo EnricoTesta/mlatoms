@@ -31,6 +31,7 @@ ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
 # Copies the trainer code
 COPY ./train/entrypoint_xgb_classifier.py /root/mlatoms/entrypoint_xgb_classifier.py
 COPY ./train/trainer.py /root/mlatoms/trainer.py
+COPY validation.py /root/mlatoms/validation.py
 COPY atoms.py /root/mlatoms/atoms.py
 
 # Sets up the entry point to invoke the trainer.
