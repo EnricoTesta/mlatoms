@@ -16,8 +16,21 @@ INFORMATION_OPTIONAL_KEYS = ["STRATIFICATION_COLUMN", "CATEGORICAL_COLUMN", "ORD
 
 
 class Atom:
+    """
+    Base data processing class. Serves as super class for specialized tasks such as pre-processing, training, and scoring.
+    Bears all logic common to single data processing tasks (a.k.a. atoms) in a Machine Learning environment.
+    """
 
     def __init__(self, data_path=None, model_path=None, algo=None, params=None):
+        """
+        Atom constructor method.
+        :param data_path: string specifying absolute path to data to be processed. Can be local file system or GCS path.
+        :param model_path: string specifying absolute path to export trained model. Can be local file system or GCS path.
+        :param algo: class that identifies the model to apply. Model can be any data transformation with sklearn-like API.
+        :param params: dict containing all parameters needed for data processing.
+        :returns: Atom object
+        """
+
         # Input information
         if data_path is None:
             raise ValueError("Must set data_path")
@@ -45,42 +58,88 @@ class Atom:
 
     @staticmethod
     def generate_unique_id():
+        """
+        Generates a unique identification string combining current timestamp
+        truncated at seconds with 10 random alphanumeric characters.
+        :return: string
+        """
         available_characters = string.ascii_letters + string.digits
         ts = dt.strftime(dt.now(), "%Y%m%d_%H%M%S") + "_"
         suffix = ''.join((random.choice(available_characters) for _ in range(10)))
         return ts + suffix
 
     def get_algo_params(self, **params_dict):
+        """
+        Get method for parameters use to instantiate algorithm class in self.algo.
+        This method is subclassed to obtain specific behaviors.
+        :param params_dict: dict of parameters useful for algorithm instantiation (useful in subclasses)
+        :return: dict
+        """
         return self.params['algo']  # kwargs ignored
 
     def get_fit_params(self, **params_dict):
+        """
+        Get method for parameters use to invoke fit method.
+        This method is subclassed to obtain specific behaviors.
+        :param params_dict: dict of parameters useful for fit method invocation (useful in subclasses)
+        :return: dict
+        """
         return self.params['fit']  # kwargs ignored
 
     def fit(self, x, y, algo_params, fit_params):
+        """
+        Instantiate model algorithm and fit to data via user-specified preferences.
+        :param x: DataFrame of Features
+        :param y: Series of Responses
+        :param algo_params: dict of parameters to instantiate model algorithm
+        :param fit_params: dict of parameters to invoke fit method
+        :return: instance of algorithm class
+        """
         return self.algo(**algo_params).fit(x, y, **fit_params)
 
     @staticmethod
     def transform(estimator, x):
+        """
+        Wrapper for transformation methods.
+        :param estimator: instance of algorithms fit to data
+        :param x: DataFrame of Features
+        :return: DataFrame
+        """
         return estimator.transform(x)
 
     @staticmethod
     def predict(estimator, x):
+        """
+        Wrapper for prediction methods.
+        :param estimator: instance of algorithms fit to data
+        :param x: DataFrame of Features
+        :return: DataFrame
+        """
         try:
             return estimator.predict_proba(x)
         except:
             return estimator.predict(x)
 
     def make_local_path(self):
+        """
+        Create an empty folder on local machine that serves as work folder.
+        """
         self.local_path = os.getcwd() + "/tmp/"
         if os.path.exists(self.local_path):  # start from scratch
             rmtree(self.local_path)
         os.makedirs(self.local_path)
 
     def retrieve_data(self):
+        """
+        Copy data to work folder
+        """
         self.make_local_path()
         os.system(' '.join(['gsutil -m', 'rsync -r', self.data_path, self.local_path]))  # fails if called by subprocess
 
     def retrieve_metadata(self):
+        """
+        Copy metadata to work folder.
+        """
         # TODO: make more robust
         try:
             model_path_shards = self.model_path.split("/")
@@ -93,7 +152,9 @@ class Atom:
         os.system(' '.join(['gsutil ', 'cp', metadata_path, self.local_path]))  # fails if called by subprocess
 
     def check_info(self):
-
+        """
+        Check user-provided information YAML file complies to expected information schema. Raise exception otherwise.
+        """
         required_keys = ["ID_COLUMN", "TARGET_COLUMN"]
 
         # Required keys
@@ -120,6 +181,10 @@ class Atom:
                     raise TypeError("All elements of STRATIFICATION_COLUMN must be strings")
 
     def read_info(self, fill=False):
+        """
+        Load user-provided information YAML in memory. Raise exception if operation fails.
+        :param fill: bool. If True add all optional information keys cast as defaults
+        """
         try:
             file_list = [item for item in os.listdir(self.local_path)
                          if os.path.isfile(os.path.join(self.local_path, item)) and
@@ -140,6 +205,9 @@ class Atom:
             raise Exception("Unable to load info YAML.")
 
     def read_metadata(self):
+        """
+        Load metadata in memory. Raise exception if operation fails.
+        """
         file_list = [item for item in os.listdir(self.local_path)
                      if os.path.isfile(os.path.join(self.local_path, item)) and
                      (item.split(".")[-1] == 'json')]
@@ -150,6 +218,13 @@ class Atom:
             self.metadata = safe_load(stream)
 
     def _get_columns_to_encode(self, features_flag, target_flag):
+        """
+        Use metadata and user-provided information to list columns eligible for encodings
+        :param features_flag: bool. If True enables feature encoding
+        :param target_flag: bool. If True enables target encoding
+        :return: list
+        """
+
         if features_flag is False and target_flag is False:
             return []
         columns_to_encode = [col for col in self.data.columns.tolist()
@@ -164,11 +239,23 @@ class Atom:
         return columns_to_encode
 
     def _encode_to_integers(self, features_flag, target_flag):
+        """
+        Encodes string columns to integers.
+        :param features_flag: bool. If True enables feature encoding
+        :param target_flag: bool. If True enables target encoding
+        """
+
         for col in self._get_columns_to_encode(features_flag, target_flag):
             if self.data[col].dtype.name == 'category':
                 self.data[col] = self.data[col].cat.codes
 
     def _encode_to_one_hot(self, features_flag, target_flag):
+        """
+        Encodes columns to 1-hot encoding.
+        :param features_flag: bool. If True enables feature encoding
+        :param target_flag: bool. If True enables target encoding
+        """
+
         columns_to_encode = self._get_columns_to_encode(features_flag, target_flag)
         try:
             # Exclude stratification columns from 1-hot encoding
@@ -184,6 +271,10 @@ class Atom:
                 pass
 
     def _generate_data_type_dict(self):
+        """
+        Use metadata to generate assign data types for each column.
+        :return: dict of (column_name, data_type) key-value pairs.
+        """
         try:
             d = {}
             for key in self.metadata['column_data_types']:
@@ -197,6 +288,14 @@ class Atom:
 
     def read_data(self, encode_features_to_int=False, encode_features_to_one_hot=False,
                   encode_target_to_int=False, encode_target_to_one_hot=False):
+        """
+        Load data in memory. Raises exception if operation fails.
+        :param encode_features_to_int: bool. If True encodes string features to integers.
+        :param encode_features_to_one_hot: bool. If True encodes all categorical features to 1-hot encoded features.
+        :param encode_target_to_int: bool. If True encodes string target to integers.
+        :param encode_target_to_one_hot: bool. If True encodes categorical target to 1-hot encoded target.
+        """
+
         try:
             # Read in-memory
             # TODO: directly read ordered columns!
@@ -212,7 +311,6 @@ class Atom:
                     dfs.append(read_csv(os.path.join(self.local_path, file), dtype=d))
             self.data = concat(dfs, axis=0)
             self.data.set_index(self.info["ID_COLUMN"], inplace=True, drop=True)
-            # self.data.reindex(columns=sorted(self.data.columns), copy=False)  # this creates a copy
 
             # Encode
             if any([encode_features_to_int, encode_target_to_int, encode_features_to_one_hot,
@@ -233,6 +331,11 @@ class Atom:
             raise Exception("Unable to load data csv.")
 
     def export_file(self, serializable_object, file_name):
+        """
+        Write an in-memory object to file. Compatible file types are: JSON, PKL, CSV.
+        :param serializable_object: object to be serialized
+        :param file_name: name of output file
+        """
 
         if serializable_object is None:
             return
@@ -269,5 +372,7 @@ class Atom:
         csv_object.to_csv(csv_file_name, index=False)
 
     def run(self):
-        """Subclass-specific task"""
+        """
+        Main data processing method. Each subclass implements a specific behavior.
+        """
         pass
