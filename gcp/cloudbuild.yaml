@@ -38,8 +38,6 @@ steps:
 images:
   - 'gcr.io/$PROJECT_ID/aggregator:aggregator'
   - 'gcr.io/$PROJECT_ID/data_evaluator:data_evaluator'
-  - 'gcr.io/$PROJECT_ID/encoder_onehot:encoder_onehot'
-  - 'gcr.io/$PROJECT_ID/encoder_string2int:encoder_str2int'
   - 'gcr.io/$PROJECT_ID/scorer_lightgbm:scorer_lgbm'
   - 'gcr.io/$PROJECT_ID/scorer_sklearn:scorer_skl'
   - 'gcr.io/$PROJECT_ID/scorer_xgboost:scorer_xgb'
