@@ -36,7 +36,7 @@ def get_args():
     parser.add_argument(
         '--early_stopping_rounds',
         type=int,
-        default=100,
+        default=200,
         metavar='early_stopping_rounds',
         help='Maximum number of iterations allowed without metric improvement on validation data')
     parser.add_argument(
