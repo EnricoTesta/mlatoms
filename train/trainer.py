@@ -331,6 +331,8 @@ class Trainer(Atom):
 
         # Export
         unique_id = self.generate_unique_id()
+        self.export_file({'algo': {**self.get_algo_params(validation=False, train_info=train_info)},
+                          'fit': {**self.get_fit_params(validation=False)}}, 'params_' + unique_id + '.json')
         self.export_file(self.trained_model, 'model_' + unique_id + '.pkl')
         self.export_file(self.predictions, 'predictions_' + unique_id + '.csv')
         self.export_file(self.validation, 'info_' + unique_id + '.csv')
