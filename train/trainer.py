@@ -226,7 +226,7 @@ class Trainer(Atom):
                 else:
                     try:
                         metric_score = metric(labeled_predictions.iloc[:, -1].values,
-                                              labeled_predictions.iloc[:, 1:-2].values)  # y_true, y_pred
+                                              labeled_predictions.iloc[:, 0:-2].values)  # y_true, y_pred
                     except ValueError:  # metric does not support probabilities
                         metric_score = metric(labeled_predictions.iloc[:, -1].values, labeled_predictions['label'].values)
             except:
