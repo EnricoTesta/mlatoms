@@ -36,7 +36,7 @@ def get_args():
     parser.add_argument(
         '--early_stopping_rounds',
         type=int,
-        default=200,
+        default=None,
         metavar='early_stopping_rounds',
         help='Maximum number of iterations allowed without metric improvement on validation data')
     parser.add_argument(
@@ -105,7 +105,10 @@ class LGBMTrainer(Trainer):
 
     @staticmethod
     def get_train_information(trained_model):
-        return {'n_estimators': trained_model._best_iteration}
+        if trained_model._best_iteration is None:
+            return {'n_estimators': trained_model.n_estimators}
+        else:
+            return {'n_estimators': trained_model._best_iteration}
 
     def get_algo_params(self, **kwargs):
         params = self.params['algo'].copy()
@@ -123,7 +126,8 @@ class LGBMTrainer(Trainer):
         # Account for early stopping
         params = self.params['fit'].copy()
         if kwargs['validation']:
-            params['eval_set'] = kwargs['validation_data']  # evaluated on the metric set by the model
+            if 'early_stopping_rounds' in params and params['early_stopping_rounds'] is not None:
+                params['eval_set'] = kwargs['validation_data']  # evaluated on the metric set by the model
         else:
             try:
                 params.pop('early_stopping_rounds')  # not needed in final training
@@ -143,7 +147,7 @@ def main():
     for item in args_dict:
         if item not in ('model_dir', 'train_files', 'hypertune_loss', 'early_stopping_rounds'):
             param_dict['algo'][item] = args_dict[item]
-        elif item == 'early_stopping_rounds':
+        elif item == 'early_stopping_rounds' and args_dict[item] is not None:
             param_dict['fit'][item] = args_dict[item]  # must specify validation data and evaluation metric @ fit time
 
     t = LGBMTrainer(data_path=args.train_files, model_path=args.model_dir, algo=LGBMClassifier,
