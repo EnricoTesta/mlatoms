@@ -236,6 +236,25 @@ class Trainer(Atom):
         d['algo'] = self.algo.__name__
         return d
 
+    def _compute_feature_exposure(self, labeled_predictions, features):
+        pearson = []
+        spearman = []
+        if labeled_predictions.shape[1] > 3:  # predictions are probabilities
+            pred = np.dot(labeled_predictions.iloc[:, 0:-2].values,
+                          [i for i in range(labeled_predictions.iloc[:, 0:-2].shape[1])])
+        else:
+            pred = labeled_predictions.iloc[:, 0:-2].values
+        for f in features:
+            relevant_indexes = features[f].notnull()
+            p = pearson_corrcoef(features[f][relevant_indexes], pred[relevant_indexes])
+            s = spearman_corrcoef(features[f][relevant_indexes], pred[relevant_indexes])
+            if not np.isnan(p):
+                pearson.append(p)
+            if not np.isnan(s):
+                spearman.append(s)
+        return np.std(pearson, ddof=1), np.std(spearman, ddof=1)
+
+
     def get_model_performance(self, trained_model, x, y, metrics_dict):
 
         # Get out-of-fold predictions
@@ -253,8 +272,11 @@ class Trainer(Atom):
         # Get metrics
         labeled_pred = pred.merge(y, left_index=True, right_index=True, copy=False)
         validation = self._compute_metrics(labeled_predictions=labeled_pred, metrics_dict=metrics_dict)
+        validation['test_feature_exposure_pearson'], \
+        validation['test_feature_exposure_spearman'] = self._compute_feature_exposure(labeled_pred, x)
 
         # Get stratified metrics
+        # TODO: add stratified feature exposure
         stratified_validation = {'strata': [], 'strata_weight': [], 'benchmark': [], 'algo': []}
         for metric_name in metrics_dict:
             stratified_validation['test_' + metric_name] = []
