@@ -55,6 +55,13 @@ def pearson_corrcoef(y, y_pred):
     return r
 
 
+def squeeze_proba(df):
+    if df.shape[1] > 1:  # predictions are probabilities
+        return np.dot(df.values, [i for i in range(df.shape[1])])
+    else:
+        return df.values
+
+
 def get_imbalance_tolerance(n_samples):
     if n_samples < 1000:
         return 0.01
@@ -223,6 +230,9 @@ class Trainer(Atom):
             try:
                 if name == 'fbeta':
                     metric_score = metric(labeled_predictions.iloc[:, -1].values, labeled_predictions['label'].values, 1)
+                elif name == 'pearson_corr' or name == 'spearman_corr':
+                    metric_score = metric(labeled_predictions.iloc[:, -1].values,
+                                          squeeze_proba(labeled_predictions.iloc[:, 0:-2]))  # y_true, y_pred
                 else:
                     try:
                         metric_score = metric(labeled_predictions.iloc[:, -1].values,
@@ -239,11 +249,7 @@ class Trainer(Atom):
     def _compute_feature_exposure(self, labeled_predictions, features):
         pearson = []
         spearman = []
-        if labeled_predictions.shape[1] > 3:  # predictions are probabilities
-            pred = np.dot(labeled_predictions.iloc[:, 0:-2].values,
-                          [i for i in range(labeled_predictions.iloc[:, 0:-2].shape[1])])
-        else:
-            pred = labeled_predictions.iloc[:, 0:-2].values
+        pred = squeeze_proba(labeled_predictions.iloc[:, 0:-2])
         for f in features:
             relevant_indexes = features[f].notnull()
             p = pearson_corrcoef(features[f][relevant_indexes], pred[relevant_indexes])
