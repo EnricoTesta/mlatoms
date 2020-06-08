@@ -84,23 +84,23 @@ class Trainer(Atom):
         metrics_dict = {}
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS:
 
-            metrics_dict['accuracy'] = metrics.accuracy_score
-            metrics_dict['log_loss'] = metrics.log_loss
-            metrics_dict['matthews_corr'] = metrics.matthews_corrcoef
-            metrics_dict['spearman_corr'] = spearman_corrcoef
-            metrics_dict['pearson_corr'] = pearson_corrcoef
+            metrics_dict['accuracy'] = {'func': metrics.accuracy_score, 'kwargs': {}}
+            metrics_dict['log_loss'] = {'func': metrics.log_loss, 'kwargs': {}}
+            metrics_dict['matthews_corr'] = {'func': metrics.matthews_corrcoef, 'kwargs': {}}
+            metrics_dict['spearman_corr'] = {'func': spearman_corrcoef, 'kwargs': {}}
+            metrics_dict['pearson_corr'] = {'func': pearson_corrcoef, 'kwargs': {}}
             if target.unique().shape[0] == 2:  # binary
-                metrics_dict['roc_auc'] = metrics.roc_auc_score  # average: 'macro' is default
-                metrics_dict['hinge_loss'] = metrics.hinge_loss
-                metrics_dict['f1'] = metrics.f1_score
-                metrics_dict['precision'] = metrics.precision_score
-                metrics_dict['recall'] = metrics.recall_score
-                metrics_dict['fbeta'] = metrics.fbeta_score
+                metrics_dict['roc_auc'] = {'func': metrics.roc_auc_score, 'kwargs': {}}  # average: 'macro' is default
+                metrics_dict['hinge_loss'] = {'func': metrics.hinge_loss, 'kwargs': {}}
+                metrics_dict['f1'] = {'func': metrics.f1_score, 'kwargs': {}}
+                metrics_dict['precision'] = {'func': metrics.precision_score, 'kwargs': {}}
+                metrics_dict['recall'] = {'func': metrics.recall_score, 'kwargs': {}}
+                metrics_dict['fbeta'] = {'func': metrics.fbeta_score, 'kwargs': {'average': 'binary'}}
             else:  # multi-class
-                metrics_dict['f1'] = metrics.f1_score
-                metrics_dict['precision'] = metrics.precision_score
-                metrics_dict['recall'] = metrics.recall_score
-                metrics_dict['fbeta'] = metrics.fbeta_score
+                metrics_dict['f1'] = {'func': metrics.f1_score, 'kwargs': {'average': 'weighted'}}
+                metrics_dict['precision'] = {'func': metrics.precision_score, 'kwargs': {'average': 'weighted'}}
+                metrics_dict['recall'] = {'func': metrics.recall_score, 'kwargs': {'average': 'weighted'}}
+                metrics_dict['fbeta'] = {'func': metrics.fbeta_score, 'kwargs': {'average': 'weighted'}}
 
         elif self.algo.__name__ in REGRESSION_ESTIMATORS:
             raise NotImplementedError
@@ -229,16 +229,16 @@ class Trainer(Atom):
         for name, metric in metrics_dict.items():
             try:
                 if name == 'fbeta':
-                    metric_score = metric(labeled_predictions.iloc[:, -1].values, labeled_predictions['label'].values, 1)
+                    metric_score = metric['func'](labeled_predictions.iloc[:, -1].values, labeled_predictions['label'].values, 1, **metric['kwargs'])
                 elif name == 'pearson_corr' or name == 'spearman_corr':
-                    metric_score = metric(labeled_predictions.iloc[:, -1].values,
-                                          squeeze_proba(labeled_predictions.iloc[:, 0:-2]))  # y_true, y_pred
+                    metric_score = metric['func'](labeled_predictions.iloc[:, -1].values,
+                                          squeeze_proba(labeled_predictions.iloc[:, 0:-2]), **metric['kwargs'])  # y_true, y_pred
                 else:
                     try:
-                        metric_score = metric(labeled_predictions.iloc[:, -1].values,
-                                              labeled_predictions.iloc[:, 0:-2].values)  # y_true, y_pred
+                        metric_score = metric['func'](labeled_predictions.iloc[:, -1].values,
+                                              labeled_predictions.iloc[:, 0:-2].values, **metric['kwargs'])  # y_true, y_pred
                     except ValueError:  # metric does not support probabilities
-                        metric_score = metric(labeled_predictions.iloc[:, -1].values, labeled_predictions['label'].values)
+                        metric_score = metric['func'](labeled_predictions.iloc[:, -1].values, labeled_predictions['label'].values, **metric['kwargs'])
             except:
                 metric_score = np.nan
             d['test_' + name] = metric_score
@@ -292,7 +292,7 @@ class Trainer(Atom):
             strat_pred = strat_pred.merge(y, left_index=True, right_index=True, copy=False)
 
             for value in strat_values:
-                relevant_data = strat_pred.loc[strat_pred[strat_pred.columns[0]] == value]
+                relevant_data = strat_pred.loc[strat_pred[strat_pred.columns[0]] == value].drop(columns=strat_df.columns[0])  # get labeled_predictions-like DataFrame
                 stratified_validation['strata'].append(value)
                 stratified_validation['strata_weight'].append(relevant_data.shape[0] / strat_pred.shape[0])
                 d = self._compute_metrics(labeled_predictions=relevant_data, metrics_dict=metrics_dict)
