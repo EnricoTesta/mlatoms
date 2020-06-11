@@ -47,13 +47,7 @@ class BatchPredictor(Atom):
                 names.append('probability_' + str(i))  # classification setting
             return names
 
-    def retrieve_model(self):
-        # Fetch model & preprocess from GCS
-        try:
-            os.system(' '.join(['gsutil -m', 'cp', self.model_path, self.local_path]))
-        except:
-            raise ValueError("Model file not found")
-
+    def retrieve_preprocess(self):
         if self.preprocess_path is not None:
             try:
                 if isinstance(self.preprocess_path, list):
@@ -64,14 +58,14 @@ class BatchPredictor(Atom):
             except:
                 raise ValueError("Preprocess file not found")
 
-    def restore_model(self):
-        # Restore model
+    def retrieve_model(self):
+        # Fetch model & preprocess from GCS
         try:
-            with open(os.path.join(self.local_path, self.model_path.split("/")[-1]), 'rb') as f:
-                self._model = pickle.load(f)
+            os.system(' '.join(['gsutil -m', 'cp', self.model_path, self.local_path]))
         except:
-            raise ValueError("Unable to unpickle model file")
+            raise ValueError("Model file not found")
 
+    def restore_preprocess(self):
         # Restore preprocess
         try:
             self._preprocessor = []
@@ -84,6 +78,14 @@ class BatchPredictor(Atom):
                     self._preprocessor.append(pickle.load(f))
         except:
             self._preprocessor = None
+
+    def restore_model(self):
+        # Restore model
+        try:
+            with open(os.path.join(self.local_path, self.model_path.split("/")[-1]), 'rb') as f:
+                self._model = pickle.load(f)
+        except:
+            raise ValueError("Unable to unpickle model file")
 
     def model_predict_proba(self, inputs):
         return inputs
@@ -101,7 +103,9 @@ class BatchPredictor(Atom):
         self.read_data(**self.params['read'])
 
         # Load model
+        self.retrieve_preprocess()
         self.retrieve_model()
+        self.restore_preprocess()
         self.restore_model()
 
         # Score model
