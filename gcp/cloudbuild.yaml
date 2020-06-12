@@ -15,6 +15,9 @@ steps:
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/scorer_xgboost:scorer_xgb', '-f', './score/docker_xgboost_scorer', '.' ]
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/scorer_tensorflow:scorer_tf', '-f', './score/docker_tensorflow_scorer', '.' ]
+  timeout: 600s
+- name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/classification_autosklearn:class_askl', '-f', './train/docker_askl_classifier', '.' ]
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
@@ -38,12 +41,16 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/classification_xgboost:class_xgb', '-f', './train/docker_xgb_classifier', '.' ]
   timeout: 600s
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/classification_ffnn:class_ffnn', '-f', './train/docker_ffnn_classifier', '.' ]
+  timeout: 600s
 images:
   - 'gcr.io/$PROJECT_ID/aggregator:aggregator'
   - 'gcr.io/$PROJECT_ID/data_evaluator:data_evaluator'
   - 'gcr.io/$PROJECT_ID/scorer_lightgbm:scorer_lgbm'
   - 'gcr.io/$PROJECT_ID/scorer_sklearn:scorer_skl'
   - 'gcr.io/$PROJECT_ID/scorer_xgboost:scorer_xgb'
+  - 'gcr.io/$PROJECT_ID/scorer_tensorflow:scorer_tf'
   - 'gcr.io/$PROJECT_ID/classification_autosklearn:class_askl'
   - 'gcr.io/$PROJECT_ID/classification_dummy:class_dummy'
   - 'gcr.io/$PROJECT_ID/classification_lda:class_lda'
@@ -52,4 +59,5 @@ images:
   - 'gcr.io/$PROJECT_ID/classification_sklearn_logisticregression:class_skl_logreg'
   - 'gcr.io/$PROJECT_ID/classification_qda:class_qda'
   - 'gcr.io/$PROJECT_ID/classification_xgboost:class_xgb'
+  - 'gcr.io/$PROJECT_ID/classification_ffnn:class_ffnn'
 timeout: 3600s
