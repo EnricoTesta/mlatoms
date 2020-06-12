@@ -1,7 +1,7 @@
 import numpy as np
 import hypertune
 from shutil import rmtree
-from pandas import DataFrame, concat, unique
+from pandas import DataFrame, Series, concat, unique
 from validation import KFoldValidationSchema, StratifiedKFoldValidationSchema
 from sklearn import metrics
 from imblearn.under_sampling import RandomUnderSampler
@@ -11,7 +11,8 @@ from scipy.stats import spearmanr, pearsonr
 
 CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
                              'XGBClassifier', 'AutoSklearnClassifier',
-                             'LinearDiscriminantAnalysis', 'QuadraticDiscriminantAnalysis', 'DummyClassifier']
+                             'LinearDiscriminantAnalysis', 'QuadraticDiscriminantAnalysis',
+                             'DummyClassifier', 'Sequential']
 REGRESSION_ESTIMATORS = ['LinearRegression']
 BENCHMARK_ESTIMATORS = ['DummyClassifier']
 CV_FOLDS = 3
@@ -89,7 +90,7 @@ class Trainer(Atom):
             metrics_dict['matthews_corr'] = {'func': metrics.matthews_corrcoef, 'kwargs': {}}
             metrics_dict['spearman_corr'] = {'func': spearman_corrcoef, 'kwargs': {}}
             metrics_dict['pearson_corr'] = {'func': pearson_corrcoef, 'kwargs': {}}
-            if target.unique().shape[0] == 2:  # binary
+            if self.problem_specs['binary']:
                 metrics_dict['roc_auc'] = {'func': metrics.roc_auc_score, 'kwargs': {}}  # average: 'macro' is default
                 metrics_dict['hinge_loss'] = {'func': metrics.hinge_loss, 'kwargs': {}}
                 metrics_dict['f1'] = {'func': metrics.f1_score, 'kwargs': {}}
@@ -129,6 +130,8 @@ class Trainer(Atom):
         """Returns a dictionary with 'type': regression/classification, 'balanced': True/False/None,
          'binary': True/False/None, 'n_dimensions': integer, 'n_samples': integer"""
         d = {'n_dimensions': x.shape[1], 'n_samples': x.shape[0]}
+        if isinstance(y, DataFrame):
+            y = y.dot(range(y.shape[1]))
         yu, yu_counts = np.unique(y, return_counts=True)
         if len(yu) >= 100 or np.count_nonzero(yu - np.around(yu)) > 0:
             d['type'] = 'regression'
@@ -313,14 +316,24 @@ class Trainer(Atom):
         self.read_metadata()
         self.read_data(**self.params['read'])
 
-        y = self.data[self.info["TARGET_COLUMN"]]
-        if self.algo.__name__ in CLASSIFICATION_ESTIMATORS and y.apply(lambda x: x - int(x) != 0).any():  # THIS IS SLOW
-            raise ValueError("Target variable for classification algorithms must be integer encoded.")
+        y = self.data[[col for col in self.data.columns if self.info["TARGET_COLUMN"] in col]]
+        if self.algo.__name__ in CLASSIFICATION_ESTIMATORS:
+            if isinstance(y, DataFrame):
+                flag_list = []
+                for col in y:
+                    flag_list.append(y[col].apply(lambda x: x - int(x) != 0).any())  # THIS IS SLOW
+                non_integer_encoding_flag = max(flag_list)
+            elif isinstance(y, Series):
+                non_integer_encoding_flag = y.apply(lambda x: x - int(x) != 0).any()  # THIS IS SLOW
+            else:
+                raise TypeError("Target should be either DataFrame or Series, got %s." % type(y))
+            if non_integer_encoding_flag:
+                raise ValueError("Target variable for classification algorithms must be integer encoded.")
 
         try:
-            special_column_list = [self.info["TARGET_COLUMN"]] + self.info["STRATIFICATION_COLUMN"]
+            special_column_list = [col for col in self.data.columns if self.info["TARGET_COLUMN"] in col] + self.info["STRATIFICATION_COLUMN"]
         except KeyError:
-            special_column_list = [self.info["TARGET_COLUMN"]]
+            special_column_list = [col for col in self.data.columns if self.info["TARGET_COLUMN"] in col]
         x = self.data.iloc[:, np.isin(self.data.columns, special_column_list, invert=True)]
         self.problem_specs = self.infer_problem_specs(x, y)
 
@@ -333,7 +346,7 @@ class Trainer(Atom):
         if "STRATIFICATION_COLUMN" in self.info:
             stratification_column_list += self.info["STRATIFICATION_COLUMN"]
         if force_stratify_on_target:
-            stratification_column_list += [self.info["TARGET_COLUMN"]]
+            stratification_column_list += [col for col in self.data.columns if self.info["TARGET_COLUMN"] in col]
         stratification_column_list = list(set(stratification_column_list))  # remove duplicates
 
         if stratification_column_list:
@@ -359,9 +372,9 @@ class Trainer(Atom):
 
         # Export
         unique_id = self.generate_unique_id()
+        self.export_model_file(self.trained_model, 'model_' + unique_id)
         self.export_file({'algo': {**self.get_algo_params(validation=False, train_info=train_info)},
                           'fit': {**self.get_fit_params(validation=False)}}, 'params_' + unique_id + '.json')
-        self.export_file(self.trained_model, 'model_' + unique_id + '.pkl')
         self.export_file(self.predictions, 'predictions_' + unique_id + '.csv')
         self.export_file(self.validation, 'info_' + unique_id + '.csv')
         self.export_file(self.stratified_validation, 'stratified_info_' + unique_id + '.csv')
@@ -376,3 +389,6 @@ class Trainer(Atom):
         hpt.report_hyperparameter_tuning_metric(
             hyperparameter_metric_tag=self.hypertune_loss,
             metric_value=self.validation['test_' + HYPERTUNE_LOSSES[self.hypertune_loss]].mean())
+
+    def export_model_file(self, obj, file_name):
+        super().export_file(obj, file_name + '.pkl')
