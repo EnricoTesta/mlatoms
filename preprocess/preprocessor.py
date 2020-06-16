@@ -58,7 +58,8 @@ class DataEvaluator(Atom):
         self.metadata['category_encodings'] = {}
         self.metadata['category_value_distribution'] = {}
         for col in self.data.columns:
-            if self.data.dtypes[col].name == 'object' or col in self.info["CATEGORICAL_COLUMN"]:
+            if self.data.dtypes[col].name == 'object' or col in self.info["CATEGORICAL_COLUMN"] or \
+                    (col == self.info["TARGET_COLUMN"] and self.info["PROBLEM_TYPE"] == 'classification'):
                 self.metadata['column_types'][col] = 'categorical'
                 self.metadata['column_data_types'][col] = 'category'
                 self.metadata['category_encodings'][col] = list(self.data[col].astype('category').dtype.categories)
