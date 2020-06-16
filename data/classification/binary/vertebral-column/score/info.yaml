@@ -1,2 +1,3 @@
 ID_COLUMN: "Record_ID"
 TARGET_COLUMN: "Vertebral_Column_Status"
+PROBLEM_TYPE: 'classification'

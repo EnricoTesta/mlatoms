@@ -1,5 +1,6 @@
 TARGET_COLUMN: 'isFraud'
 ID_COLUMN: 'TransactionID'
+PROBLEM_TYPE: 'classification'
 STRATIFICATION_COLUMN:
   - 'isFraud'
 USELESS_COLUMN:

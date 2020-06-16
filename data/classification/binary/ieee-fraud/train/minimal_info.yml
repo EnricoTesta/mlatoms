@@ -1,4 +1,5 @@
 ID_COLUMN: "TransactionID"
 TARGET_COLUMN: "isFraud"
+PROBLEM_TYPE: 'classification'
 STRATIFICATION_COLUMN:
   - "week"
