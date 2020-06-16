@@ -232,16 +232,18 @@ class Trainer(Atom):
         for name, metric in metrics_dict.items():
             try:
                 if name == 'fbeta':
-                    metric_score = metric['func'](labeled_predictions.iloc[:, -1].values, labeled_predictions['label'].values, 1, **metric['kwargs'])
+                    metric_score = metric['func'](labeled_predictions['ground_truth'].values,
+                                                  labeled_predictions['label'].values, 1, **metric['kwargs'])
                 elif name == 'pearson_corr' or name == 'spearman_corr':
-                    metric_score = metric['func'](labeled_predictions.iloc[:, -1].values,
+                    metric_score = metric['func'](labeled_predictions['ground_truth'].values,
                                           squeeze_proba(labeled_predictions.iloc[:, 0:-2]), **metric['kwargs'])  # y_true, y_pred
                 else:
                     try:
-                        metric_score = metric['func'](labeled_predictions.iloc[:, -1].values,
+                        metric_score = metric['func'](labeled_predictions['ground_truth'].values,
                                               labeled_predictions.iloc[:, 0:-2].values, **metric['kwargs'])  # y_true, y_pred
                     except ValueError:  # metric does not support probabilities
-                        metric_score = metric['func'](labeled_predictions.iloc[:, -1].values, labeled_predictions['label'].values, **metric['kwargs'])
+                        metric_score = metric['func'](labeled_predictions['ground_truth'].values,
+                                                      labeled_predictions['label'].values, **metric['kwargs'])
             except:
                 metric_score = np.nan
             d['test_' + name] = metric_score
@@ -279,7 +281,13 @@ class Trainer(Atom):
         pred.columns = predictions_col_names
 
         # Get metrics
-        labeled_pred = pred.merge(y, left_index=True, right_index=True, copy=False)
+        if y.shape[1] == 1:
+            labeled_pred = pred.merge(y.rename(columns={y.columns[0]: 'ground_truth'}),
+                                      left_index=True, right_index=True, copy=False)
+        else:
+            # condense 1-hot response
+            labeled_pred = pred.merge(Series(y.dot(range(y.shape[1])), name='ground_truth'),
+                                      left_index=True, right_index=True, copy=False)
         validation = self._compute_metrics(labeled_predictions=labeled_pred, metrics_dict=metrics_dict)
         validation['test_feature_exposure_pearson'], \
         validation['test_feature_exposure_spearman'] = self._compute_feature_exposure(labeled_pred, x)
@@ -292,8 +300,12 @@ class Trainer(Atom):
         if "STRATIFICATION_COLUMN" in self.info:
             strat_df, strat_values = self._build_stratification_variable(self.data[self.info["STRATIFICATION_COLUMN"]])
             strat_pred = strat_df.merge(pred, left_index=True, right_index=True)
-            strat_pred = strat_pred.merge(y, left_index=True, right_index=True, copy=False)
-
+            if y.shape[1] == 1:
+                strat_pred = strat_pred.merge(y.rename(columns={y.columns[0]: 'ground_truth'}),
+                                                       left_index=True, right_index=True, copy=False)
+            else:
+                strat_pred = strat_pred.merge(Series(y.dot(range(y.shape[1])), name='ground_truth'),
+                                              left_index=True, right_index=True, copy=False)
             for value in strat_values:
                 relevant_data = strat_pred.loc[strat_pred[strat_pred.columns[0]] == value].drop(columns=strat_df.columns[0])  # get labeled_predictions-like DataFrame
                 stratified_validation['strata'].append(value)
