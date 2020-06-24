@@ -14,6 +14,19 @@ from pandas.api.types import CategoricalDtype
 
 INFORMATION_OPTIONAL_KEYS = ["STRATIFICATION_COLUMN", "CATEGORICAL_COLUMN", "ORDINAL_COLUMN", "USELESS_COLUMN"]
 
+def squeeze_proba(df, index=False):
+    if df.shape[1] > 1:  # predictions are probabilities
+        if index:
+            d = DataFrame([df.index, numpy.dot(df.values, [i for i in range(df.shape[1])])]).transpose()
+            d.columns = ["id", "preds"]
+            return d.set_index("id").astype("float")
+        else:
+            return numpy.dot(df.values, [i for i in range(df.shape[1])])
+    else:
+        if index:
+            return df
+        else:
+            return df.values
 
 class Atom:
     """
@@ -146,7 +159,7 @@ class Atom:
             if model_path_shards[0] == 'gs:':
                 metadata_path = '/'.join(model_path_shards[0:6] + ['METADATA'] + ['TRAIN'] + ['metadata.json'])
             else:
-                metadata_path = self.model_path + '/metadata.json'
+                metadata_path = '/mlatoms/test/modeldir/metadata.json'
         except AttributeError:
             metadata_path = '/mlatoms/test/modeldir/metadata.json'
         os.system(' '.join(['gsutil ', 'cp', metadata_path, self.local_path]))  # fails if called by subprocess

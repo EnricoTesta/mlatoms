@@ -5,7 +5,7 @@ from pandas import DataFrame, Series, concat, unique
 from validation import KFoldValidationSchema, StratifiedKFoldValidationSchema
 from sklearn import metrics
 from imblearn.under_sampling import RandomUnderSampler
-from atoms import Atom
+from atoms import Atom, squeeze_proba
 from scipy.stats import spearmanr, pearsonr
 
 
@@ -54,13 +54,6 @@ def pearson_corrcoef(y, y_pred):
         y_pred_synthetic = np.matmul(y_pred.reshape(-1, 1), col_list).reshape(-1, 1) / cols
     r, _ = pearsonr(y.ravel(), y_pred_synthetic.ravel())
     return r
-
-
-def squeeze_proba(df):
-    if df.shape[1] > 1:  # predictions are probabilities
-        return np.dot(df.values, [i for i in range(df.shape[1])])
-    else:
-        return df.values
 
 
 def get_imbalance_tolerance(n_samples):
