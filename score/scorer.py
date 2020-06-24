@@ -2,10 +2,12 @@ import os
 import pickle
 import subprocess
 import numpy as np
+from scipy import stats
 from shutil import rmtree
 from pandas import DataFrame
 from logging import getLogger
-from atoms import Atom
+from sklearn.preprocessing import MinMaxScaler
+from atoms import Atom, squeeze_proba
 
 logger = getLogger("sklearn_predictor")
 
@@ -15,6 +17,7 @@ class BatchPredictor(Atom):
                  algo=None, params=None, output_dir=None, use_probabilities=False):
         super().__init__(data_path, model_path, algo, params)
         self.preprocess_path = preprocess_path  # this is either a string or a list of strings
+        self.stratification_df = None
         self._model = None
         self._preprocessor = None
         self._output_dir = output_dir
@@ -23,6 +26,7 @@ class BatchPredictor(Atom):
     def default_preprocess(self, info, inputs):
         logger.info("Dropping useless columns. Fetching ids...")
         column_to_drop_list = [col for col in self.data.columns if self.info["TARGET_COLUMN"] in col]
+        self.stratification_df = self.data[self.info["STRATIFICATION_COLUMN"]]
         for key in ["USELESS_COLUMN", "STRATIFICATION_COLUMN"]:
             try:
                 column_to_drop_list += info[key]
@@ -93,6 +97,45 @@ class BatchPredictor(Atom):
     def model_predict(self, inputs):
         return inputs
 
+    @staticmethod
+    def _neutralize(df, columns, by, proportion=1.0):
+        scores = df[columns]
+        exposures = df[by].values
+        scores = scores - proportion * exposures.dot(np.linalg.pinv(exposures).dot(scores))
+        return scores / scores.std()
+
+    @staticmethod
+    def _normalize(df):
+        X = (df.rank(method="first") - 0.5) / len(df)
+        return stats.norm.ppf(X)
+
+
+    def normalize_and_neutralize(self, df, columns, by, proportion=1.0):
+        # Convert the scores to a normal distribution
+        df[columns] = self._normalize(df[columns])
+        df[columns] = self._neutralize(df, columns, by, proportion)
+        return df[columns]
+
+    def neutralize_scores(self, scores, proportion=1.0):
+
+        # TODO: generalize to multiclass case
+        # Verify scores are 1-D, squeeze them otherwise (!!! - NOT GENERAL IN MULTI-CLASS CASE - !!!)
+        squeezed_scores = squeeze_proba(scores.set_index('id'), index=True)
+
+        # Merge in a single dataframe
+        features = self.data.columns
+        df = self.data.merge(squeezed_scores, left_index=True, right_index=True)\
+            .merge(self.stratification_df, left_index=True, right_index=True)
+
+        neutralized_scores = df.groupby(self.info["STRATIFICATION_COLUMN"])\
+            .apply(lambda x: self.normalize_and_neutralize(x, ["preds"], features, proportion))
+
+        scaler = MinMaxScaler()
+        scaled_neutralized_scores = DataFrame([neutralized_scores.index, scaler.fit_transform(neutralized_scores).flatten()]).transpose()
+        scaled_neutralized_scores.columns = ["id", "scores"]
+        return scaled_neutralized_scores  # transform back to 0-1
+
+
     def run(self):
 
         # Fetch data
@@ -119,24 +162,34 @@ class BatchPredictor(Atom):
             logger.info("No preprocessing applied")
 
         tmp_file_path = os.path.join(self.local_path, 'results.csv')
+        neutral_tmp_file_path = os.path.join(self.local_path, 'neutralized_results.csv')
         if self._use_probabilities:
             logger.info("Predicting probabilities...")
             probabilities = self.model_predict_proba(preprocessed_inputs)
             column_names = self.generate_column_names(probabilities)
-            DataFrame(np.concatenate((ids.values.reshape(-1, 1), probabilities), axis=1),
-                      columns=['id'] + column_names).to_csv(path_or_buf=tmp_file_path, index=False)
+            scores = DataFrame(np.concatenate((ids.values.reshape(-1, 1), probabilities), axis=1),
+                     columns=['id'] + column_names)
         else:
             logger.info("Predicting values...")
             outputs = self.model_predict(preprocessed_inputs)
             column_names = self.generate_column_names(outputs)
-            DataFrame(np.concatenate((ids.values.reshape(-1, 1), outputs), axis=1),
-                      columns=['id'] + column_names).to_csv(path_or_buf=tmp_file_path, index=False)
+            scores = DataFrame(np.concatenate((ids.values.reshape(-1, 1), outputs), axis=1),
+                     columns=['id'] + column_names)
 
-        # self.predictions = self.transform(self.trained_model, self.data).reset_index()  # TODO: verify index
+        # Neutralize scores (a.k.a. remove linear exposures with features)
+        neutralized_scores = self.neutralize_scores(scores)
+
+        # Write scores
+        scores.to_csv(path_or_buf=tmp_file_path, index=False)
+        neutralized_scores.to_csv(path_or_buf=neutral_tmp_file_path, index=False)
 
         # Step 5 - Send results to GCS
         subprocess.check_call(['gsutil', 'cp', tmp_file_path,
                                os.path.join(self._output_dir, 'results.csv')])
+        subprocess.check_call(['gsutil', 'cp', neutral_tmp_file_path,
+                               os.path.join("/".join(["/".join(self._output_dir.split("/")[0:-2]),
+                                                      'NEUTRALIZED_'+self._output_dir.split("/")[-2]]),
+                                            'neutralized_results.csv')])
 
         # Clean-up
         rmtree(self.local_path)
