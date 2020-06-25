@@ -186,11 +186,17 @@ class BatchPredictor(Atom):
         # Step 5 - Send results to GCS
         subprocess.check_call(['gsutil', 'cp', tmp_file_path,
                                os.path.join(self._output_dir, 'results.csv')])
-        subprocess.check_call(['gsutil', 'cp', neutral_tmp_file_path,
-                               os.path.join("/".join(["/".join(self._output_dir.split("/")[0:-2]),
-                                                      'NEUTRALIZED_'+self._output_dir.split("/")[-2]]),
-                                            'neutralized_results.csv')])
+        if self._output_dir.startswith("gs://"):
+            shards = self._output_dir.split("/")
+            prefix = shards[0:-4]
+            neutral_folder = ['NEUTRALIZED_' + shards[-4]]
+            suffix = shards[-3:]
+            full_neutralized_path = os.path.join("/".join(prefix + neutral_folder + suffix), 'neutralized_results.csv')
+        else:
+            full_neutralized_path = os.path.join("/".join(["/".join(self._output_dir.split("/")[0:-2]),
+                                                           'NEUTRALIZED_'+self._output_dir.split("/")[-2]]),
+                                                 'neutralized_results.csv')
+        subprocess.check_call(['gsutil', 'cp', neutral_tmp_file_path, full_neutralized_path])
 
         # Clean-up
         rmtree(self.local_path)
-
