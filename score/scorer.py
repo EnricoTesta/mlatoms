@@ -130,9 +130,18 @@ class BatchPredictor(Atom):
         neutralized_scores = df.groupby(self.info["STRATIFICATION_COLUMN"])\
             .apply(lambda x: self.normalize_and_neutralize(x, ["preds"], features, proportion))
 
+        neutralized_scores.to_csv(os.getcwd() + "/neutralized_scores.csv", index=False)
+        gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/neutralized_scores.csv"
+        subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/neutralized_scores.csv", gcp_path])
+
         scaler = MinMaxScaler()
         scaled_neutralized_scores = DataFrame([neutralized_scores.index, scaler.fit_transform(neutralized_scores).flatten()]).transpose()
         scaled_neutralized_scores.columns = ["id", "scores"]
+
+        scaled_neutralized_scores.to_csv(os.getcwd() + "/scaled_neutralized_scores.csv", index=False)
+        gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/scaled_neutralized_scores.csv"
+        subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/scaled_neutralized_scores.csv", gcp_path])
+
         return scaled_neutralized_scores  # transform back to 0-1
 
 
