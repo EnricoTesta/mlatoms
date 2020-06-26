@@ -26,9 +26,9 @@ class BatchPredictor(Atom):
     def default_preprocess(self, info, inputs):
         logger.info("Dropping useless columns. Fetching ids...")
 
-        self.data.to_csv(os.getcwd() + "/data.csv", index=False)
-        gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/data.csv"
-        subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/data.csv", gcp_path])
+        self.data.to_csv(os.getcwd() + "/data_before_preprocess.csv", index=False)
+        gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/data_before_preprocess.csv"
+        subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/data_before_preprocess.csv", gcp_path])
 
         column_to_drop_list = [col for col in self.data.columns if self.info["TARGET_COLUMN"] in col]
         self.stratification_df = self.data[self.info["STRATIFICATION_COLUMN"]].copy(deep=True)
