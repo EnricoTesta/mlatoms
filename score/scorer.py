@@ -149,6 +149,10 @@ class BatchPredictor(Atom):
         gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/squeezed_scores.csv"
         subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/squeezed_scores.csv", gcp_path])
 
+        self.stratification_df.to_csv(os.getcwd() + "/stratification_df.csv", index=False)
+        gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/stratification_df.csv"
+        subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/stratification_df.csv", gcp_path])
+
         # Merge in a single dataframe
         features = self.data.columns
         df = self.data.merge(squeezed_scores, left_index=True, right_index=True)\
