@@ -102,6 +102,25 @@ class BatchPredictor(Atom):
         scores = df[columns]
         exposures = df[by].values
         scores = scores - proportion * exposures.dot(np.linalg.pinv(exposures).dot(scores))
+        if scores.std().values[0] == 0:
+            print("0 standard deviation!")
+            x = scores / scores.std()
+            x.reset_index().to_csv(os.getcwd() + "/0_std_dev_neutralize.csv", index=False)
+            gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/0_std_dev_neutralize.csv"
+            subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/0_std_dev_neutralize.csv", gcp_path])
+
+            scores.to_csv(os.getcwd() + "/0_std_dev_scores.csv", index=False)
+            gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/0_std_dev_scores.csv"
+            subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/0_std_dev_scores.csv", gcp_path])
+
+            df[columns].to_csv(os.getcwd() + "/0_std_dev_cols.csv", index=False)
+            gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/0_std_dev_cols.csv"
+            subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/0_std_dev_cols.csv", gcp_path])
+
+            DataFrame(exposures).to_csv(os.getcwd() + "/0_std_dev_exposures.csv", index=False)
+            gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/0_std_dev_exposures.csv"
+            subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/0_std_dev_exposures.csv", gcp_path])
+
         return scores / scores.std()
 
     @staticmethod
@@ -118,17 +137,33 @@ class BatchPredictor(Atom):
 
     def neutralize_scores(self, scores, proportion=1.0):
 
+        scores.to_csv(os.getcwd() + "/scores.csv", index=False)
+        gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/scores.csv"
+        subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/scores.csv", gcp_path])
+
         # TODO: generalize to multiclass case
         # Verify scores are 1-D, squeeze them otherwise (!!! - NOT GENERAL IN MULTI-CLASS CASE - !!!)
         squeezed_scores = squeeze_proba(scores.set_index('id'), index=True)
+
+        squeezed_scores.to_csv(os.getcwd() + "/squeezed_scores.csv", index=False)
+        gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/squeezed_scores.csv"
+        subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/squeezed_scores.csv", gcp_path])
 
         # Merge in a single dataframe
         features = self.data.columns
         df = self.data.merge(squeezed_scores, left_index=True, right_index=True)\
             .merge(self.stratification_df, left_index=True, right_index=True)
 
+        print("Number of missing values in dataframe is {}".format(df.isna().sum().sum()))
+
+        df.sample(100).to_csv(os.getcwd() + "/sample_df.csv", index=False)
+        gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/sample_df.csv"
+        subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/sample_df.csv", gcp_path])
+
         neutralized_scores = df.groupby(self.info["STRATIFICATION_COLUMN"])\
             .apply(lambda x: self.normalize_and_neutralize(x, ["preds"], features, proportion))
+
+        print("Number of missing values in dataframe is {}".format(neutralized_scores.isna().sum().sum()))
 
         neutralized_scores.to_csv(os.getcwd() + "/neutralized_scores.csv", index=False)
         gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/neutralized_scores.csv"
