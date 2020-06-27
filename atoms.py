@@ -294,7 +294,7 @@ class Atom:
         try:
             d = {}
             for key in self.metadata['column_data_types']:
-                if self.metadata['column_data_types'][key] == 'category':
+                if self.metadata['column_data_types'][key] == 'category' and key not in self.info["STRATIFICATION_COLUMN"]:
                     d[key] = CategoricalDtype(self.metadata['category_encodings'][key], ordered=False)
                 elif self.metadata['column_data_types'][key] == 'float64':
                     d[key] = numpy.float64
