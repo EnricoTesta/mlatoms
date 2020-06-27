@@ -277,8 +277,6 @@ class Atom:
         except KeyError:
             pass
         if columns_to_encode:
-            for c in columns_to_encode:
-                print("1-hot encoding column {}".format(c))
             self.data = get_dummies(self.data, columns=columns_to_encode, dummy_na=True)  # can't do it in-place
             try:
                 # target cannot be NaN
@@ -328,25 +326,12 @@ class Atom:
             self.data = concat(dfs, axis=0)
             self.data.set_index(self.info["ID_COLUMN"], inplace=True, drop=True)
 
-            self.data.sample(1000).to_csv(os.getcwd() + "/data_as_read.csv", index=False)
-            gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/data_as_read.csv"
-            subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/data_as_read.csv", gcp_path])
-
             # Encode
             if any([encode_features_to_int, encode_target_to_int, encode_features_to_one_hot,
                     encode_target_to_one_hot]) and not self.metadata:
                 raise ValueError("Cannot encode without metadata.")
             self._encode_to_integers(encode_features_to_int, encode_target_to_int)
-
-            self.data.sample(1000).to_csv(os.getcwd() + "/data_after_int_encoding.csv", index=False)
-            gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/data_after_int_encoding.csv"
-            subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/data_after_int_encoding.csv", gcp_path])
-
             self._encode_to_one_hot(encode_features_to_one_hot, encode_target_to_one_hot)
-
-            self.data.sample(1000).to_csv(os.getcwd() + "/data_after_hot_encoding.csv", index=False)
-            gcp_path = "gs://my-model-bucket-1000/ET/NUMER/217/TEST_NEUTRAL/data_after_hot_encoding.csv"
-            subprocess.check_call(['gsutil', 'cp', os.getcwd() + "/data_after_hot_encoding.csv", gcp_path])
 
             # Clean column names (i.e. remove special chars and whitespaces)
             clean_col_names = {}
