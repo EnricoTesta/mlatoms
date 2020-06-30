@@ -1,6 +1,7 @@
 from sklearn.model_selection import StratifiedKFold, KFold
 from imblearn.under_sampling import RandomUnderSampler
 from abc import ABC, abstractmethod
+from pandas import concat
 import numpy as np
 
 
@@ -48,3 +49,41 @@ class StratifiedKFoldValidationSchema(BaseValidationSchema):
     def _split(self, x, y, **kwargs):
         for train, validation in self.schema_generator.split(x, kwargs['stratification_variable']):
             yield train, validation
+
+
+class GroupStrataKFoldValidationSchema(BaseValidationSchema):
+    """
+        Use stratification variable unique values to form groups on which you perform KFold. This ensures that each
+        group will appear entirely either in train or validation set.
+    """
+
+    def __init__(self, params=None):
+        super().__init__(schema_generator_class=KFold, params=params)
+
+    def _split(self, x, y, **kwargs):
+
+        groups = np.unique(kwargs['stratification_variable'])
+        # sample_list = []
+        for train_groups, validation_groups in self.schema_generator.split(groups):
+            df_list = []
+            # print("")
+            # print("Training on groups:")
+            # for item in train_groups:
+            #     print(groups[item])
+            # print("Validation on groups:")
+            # for item in validation_groups:
+            #     print(groups[item])
+            for value in validation_groups:
+                    df_list.append(kwargs['stratification_variable'] == groups[value])
+            validation_indexes = concat(df_list, axis=1).sum(axis=1)
+            train_indexes = 1-validation_indexes
+            x['integer_based_index'] = range(x.shape[0])
+
+            # if not sample_list:
+            #     sample_list = list(x.sample(5).index)
+            # for item in sample_list:
+            #     print("Sample {}, belonging to {} is in validation group: {}".format(item,
+            #                                                                          kwargs['stratification_variable'].loc[item].values[0],
+            #                                                                          validation_indexes.loc[item]))
+
+            yield x['integer_based_index'].loc[train_indexes == 1].values, x['integer_based_index'].loc[validation_indexes == 1].values

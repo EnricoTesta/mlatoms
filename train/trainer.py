@@ -2,7 +2,7 @@ import numpy as np
 import hypertune
 from shutil import rmtree
 from pandas import DataFrame, Series, concat, unique
-from validation import KFoldValidationSchema, StratifiedKFoldValidationSchema
+from validation import KFoldValidationSchema, StratifiedKFoldValidationSchema, GroupStrataKFoldValidationSchema
 from sklearn import metrics
 from imblearn.under_sampling import RandomUnderSampler
 from atoms import Atom, squeeze_proba
@@ -161,6 +161,9 @@ class Trainer(Atom):
                                 'kwargs': {}}
         else:
             strat_var, _ = self._build_stratification_variable(stratification)
+            schemas['GroupStrataKFold'] = {'schema': GroupStrataKFoldValidationSchema(params={'n_splits': CV_FOLDS,
+                                                                                            'shuffle': False}),
+                                          'kwargs': {'stratification_variable': strat_var}}
             schemas['StratifiedKFold'] = {'schema': StratifiedKFoldValidationSchema(params={'n_splits': CV_FOLDS,
                                                                                             'shuffle': False}),
                                           'kwargs': {'stratification_variable': strat_var}}
@@ -301,11 +304,12 @@ class Trainer(Atom):
                                               left_index=True, right_index=True, copy=False)
             for value in strat_values:
                 relevant_data = strat_pred.loc[strat_pred[strat_pred.columns[0]] == value].drop(columns=strat_df.columns[0])  # get labeled_predictions-like DataFrame
-                stratified_validation['strata'].append(value)
-                stratified_validation['strata_weight'].append(relevant_data.shape[0] / strat_pred.shape[0])
-                d = self._compute_metrics(labeled_predictions=relevant_data, metrics_dict=metrics_dict)
-                for k, v in d.items():
-                    stratified_validation[k].append(v)
+                if not relevant_data.empty:  # validation schema may not always contain all stratification values
+                    stratified_validation['strata'].append(value)
+                    stratified_validation['strata_weight'].append(relevant_data.shape[0] / strat_pred.shape[0])
+                    d = self._compute_metrics(labeled_predictions=relevant_data, metrics_dict=metrics_dict)
+                    for k, v in d.items():
+                        stratified_validation[k].append(v)
 
         # Reset prediction index
         pred.reset_index(inplace=True)
