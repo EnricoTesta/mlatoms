@@ -1,18 +1,14 @@
 FROM python:3.5.7-buster
 WORKDIR /root
 
-# Installs sudo
-RUN su - &&\
-    apt-get install sudo -y &&\
-    usermod -aG sudo $USER
 
 # Installs minimum CUDA drivers
-RUN sudo apt-get update && \
-sudo apt-get install --no-install-recommends nvidia-375 && \
-sudo apt-get install --no-install-recommends nvidia-opencl-icd-375 nvidia-opencl-dev opencl-headers
+RUN apt-get update && \
+apt-get install --no-install-recommends nvidia-375 && \
+apt-get install --no-install-recommends nvidia-opencl-icd-375 nvidia-opencl-dev opencl-headers
 
 # Installs dependencies
-RUN sudo apt-get install --no-install-recommends git cmake build-essential libboost-dev libboost-system-dev libboost-filesystem-dev
+RUN apt-get install --no-install-recommends git cmake build-essential libboost-dev libboost-system-dev libboost-filesystem-dev
 
 # Installs LGBM w/GPU
 RUN git clone --recursive https://github.com/microsoft/LightGBM && \
@@ -24,10 +20,10 @@ cmake -DUSE_GPU=1 .. && \
 make -j$(nproc)
 
 # Install Python Interface
-RUN sudo apt-get -y install python-pip && \
-sudo -H pip install setuptools numpy scipy scikit-learn -U && \
+RUN apt-get -y install python-pip && \
+pip install setuptools numpy scipy scikit-learn -U && \
 cd LightGBM/python-package && \
-sudo python setup.py install --precompile
+python setup.py install --precompile
 
 # Installs google cloud sdk, this is mostly for using gsutil to export model.
 RUN apt-get update && \
