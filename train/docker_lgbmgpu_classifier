@@ -1,0 +1,65 @@
+FROM python:3.5.7-buster
+WORKDIR /root
+
+# Installs minimum CUDA drivers
+RUN sudo apt-get update && \
+sudo apt-get install --no-install-recommends nvidia-375 && \
+sudo apt-get install --no-install-recommends nvidia-opencl-icd-375 nvidia-opencl-dev opencl-headers
+
+# Installs dependencies
+RUN sudo apt-get install --no-install-recommends git cmake build-essential libboost-dev libboost-system-dev libboost-filesystem-dev
+
+# Installs LGBM w/GPU
+RUN git clone --recursive https://github.com/microsoft/LightGBM && \
+cd LightGBM && \
+mkdir build ; cd build && \
+cmake -DUSE_GPU=1 .. && \
+# if you have installed NVIDIA CUDA to a customized location, you should specify paths to OpenCL headers and library like the following:
+# cmake -DUSE_GPU=1 -DOpenCL_LIBRARY=/usr/local/cuda/lib64/libOpenCL.so -DOpenCL_INCLUDE_DIR=/usr/local/cuda/include/ ..
+make -j$(nproc)
+
+# Install Python Interface
+RUN sudo apt-get -y install python-pip && \
+sudo -H pip install setuptools numpy scipy scikit-learn -U && \
+cd LightGBM/python-package && \
+sudo python setup.py install --precompile
+
+# Installs google cloud sdk, this is mostly for using gsutil to export model.
+RUN apt-get update && \
+    apt-get install -y cmake build-essential gcc g++ git wget && \
+    pip install scikit-learn==0.21.3 pandas==0.25.0 && \
+    pip install imbalanced-learn==0.5.0 && \
+    pip install pyYAML==5.1.2 && \
+#    git clone --recursive https://github.com/Microsoft/LightGBM && \
+#    cd LightGBM/python-package && \
+#    python setup.py install && \
+    rm -rf /usr/local/src/* && \
+    pip install cloudml-hypertune && \
+    pip install lightgbm==2.2.3 --install-option=--gpu && \
+    wget -nv \
+    https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz && \
+    mkdir /root/tools && \
+    tar xvzf google-cloud-sdk.tar.gz -C /root/tools && \
+    rm google-cloud-sdk.tar.gz && \
+    /root/tools/google-cloud-sdk/install.sh --usage-reporting=false \
+        --path-update=false --bash-completion=false \
+        --disable-installation-options && \
+    rm -rf /root/.config/* && \
+    ln -s /root/.config /config && \
+    # Remove the backup directory that gcloud creates
+    rm -rf /root/tools/google-cloud-sdk/.install/.backup && \
+    echo '[GoogleCompute]\nservice_account = default' > /etc/boto.cfg && \
+    mkdir /root/mlatoms && \
+    apt-get autoremove -y && apt-get clean
+
+# Path configuration
+ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
+
+# Copies the trainer code
+COPY ./train/entrypoint_lgbm_classifier.py /root/mlatoms/entrypoint_lgbm_classifier.py
+COPY ./train/trainer.py /root/mlatoms/trainer.py
+COPY validation.py /root/mlatoms/validation.py
+COPY atoms.py /root/mlatoms/atoms.py
+
+# Sets up the entry point to invoke the trainer.
+ENTRYPOINT ["python3", "mlatoms/entrypoint_lgbmgpu_classifier.py"]
