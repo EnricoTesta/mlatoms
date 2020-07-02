@@ -1,0 +1,48 @@
+FROM tensorflow/tensorflow:2.1.1-gpu
+WORKDIR /root
+
+# Installs google cloud sdk, this is mostly for using gsutil to export model.
+RUN /bin/sh -c apt-get update && \
+
+#    distribution=$(. /etc/os-release;echo $ID$VERSION_ID) &&
+#    curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add - &&
+#    curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list &&
+#
+#    sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit &&
+#    sudo systemctl restart docker &
+
+    apt-get install -y     python3     python3-pip && \
+    /bin/sh -c python3 -m pip --no-cache-dir install --upgrade     pip     setuptools && \
+    /bin/sh -c ln -s $(which python3) /usr/local/bin/python && \
+    pip install scikit-learn==0.21.3 pandas==0.25.0 && \
+    pip install imbalanced-learn==0.5.0 && \
+    pip install pyYAML==5.1.2 && \
+    pip install cloudml-hypertune && \
+    pip install tensorflow==2.2.0 && \
+    wget -nv \
+    https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz && \
+    mkdir /root/tools && \
+    tar xvzf google-cloud-sdk.tar.gz -C /root/tools && \
+    rm google-cloud-sdk.tar.gz && \
+    /root/tools/google-cloud-sdk/install.sh --usage-reporting=false \
+        --path-update=false --bash-completion=false \
+        --disable-installation-options && \
+    rm -rf /root/.config/* && \
+    ln -s /root/.config /config && \
+    # Remove the backup directory that gcloud creates
+    rm -rf /root/tools/google-cloud-sdk/.install/.backup && \
+    echo '[GoogleCompute]\nservice_account = default' > /etc/boto.cfg && \
+    mkdir /root/mlatoms && \
+    apt-get autoremove -y && apt-get clean
+
+# Path configuration
+ENV PATH $PATH:/root/tools/google-cloud-sdk/bin
+
+# Copies the trainer code
+COPY ./train/entrypoint_ffnn_classifier.py /root/mlatoms/entrypoint_ffnn_classifier.py
+COPY ./train/trainer.py /root/mlatoms/trainer.py
+COPY validation.py /root/mlatoms/validation.py
+COPY atoms.py /root/mlatoms/atoms.py
+
+# Sets up the entry point to invoke the trainer.
+ENTRYPOINT ["python3", "mlatoms/entrypoint_ffnn_classifier.py"]
