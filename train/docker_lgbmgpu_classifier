@@ -1,6 +1,11 @@
 FROM python:3.5.7-buster
 WORKDIR /root
 
+# Installs sudo
+RUN su - &&\
+    apt-get install sudo -y &&\
+    usermod -aG sudo $USER
+
 # Installs minimum CUDA drivers
 RUN sudo apt-get update && \
 sudo apt-get install --no-install-recommends nvidia-375 && \
