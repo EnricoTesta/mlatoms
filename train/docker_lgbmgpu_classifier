@@ -39,16 +39,16 @@ echo "alias pip=pip3" >> ~/.bash_aliases && \
 SHELL ["/bin/bash", "-c"]
 RUN apt-get update && \
     apt-get install -y cmake build-essential gcc g++ git wget && \
-    pip install scikit-learn==0.21.3 pandas==0.25.0 && \
-    pip install imbalanced-learn==0.5.0 && \
-    pip install pyYAML==5.1.2 && \
+    pip3 install scikit-learn==0.21.3 pandas==0.25.0 && \
+    pip3 install imbalanced-learn==0.5.0 && \
+    pip3 install pyYAML==5.1.2 && \
 
     cd LightGBM/python-package && \
-    python setup.py install --precompile && \
+    python3 setup.py install --precompile && \
 
     rm -rf /usr/local/src/* && \
-    pip install cloudml-hypertune && \
-    pip install lightgbm==2.2.3 --install-option=--gpu && \
+    pip3 install cloudml-hypertune && \
+    pip3 install lightgbm==2.2.3 --install-option=--gpu && \
     wget -nv \
     https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz && \
     mkdir /root/tools && \
