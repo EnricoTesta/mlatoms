@@ -36,6 +36,7 @@ echo "alias pip=pip3" >> ~/.bash_aliases && \
 #python setup.py install --precompile
 
 # Installs google cloud sdk, this is mostly for using gsutil to export model.
+SHELL ["/bin/bash", "-c"]
 RUN apt-get update && \
     apt-get install -y cmake build-essential gcc g++ git wget && \
     pip install scikit-learn==0.21.3 pandas==0.25.0 && \
