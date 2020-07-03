@@ -4,11 +4,11 @@ WORKDIR /root
 
 # Installs minimum CUDA drivers
 RUN apt-get update && \
-apt-get install --no-install-recommends nvidia-375 && \
-apt-get install --no-install-recommends nvidia-opencl-icd-375 nvidia-opencl-dev opencl-headers
+apt-get -y install --no-install-recommends nvidia-375 && \
+apt-get -y install --no-install-recommends nvidia-opencl-icd-375 nvidia-opencl-dev opencl-headers
 
 # Installs dependencies
-RUN apt-get install --no-install-recommends git cmake build-essential libboost-dev libboost-system-dev libboost-filesystem-dev
+RUN apt-get -y install --no-install-recommends git cmake build-essential libboost-dev libboost-system-dev libboost-filesystem-dev
 
 # Installs LGBM w/GPU
 RUN git clone --recursive https://github.com/microsoft/LightGBM && \
@@ -18,12 +18,13 @@ cmake -DUSE_GPU=1 .. && \
 # if you have installed NVIDIA CUDA to a customized location, you should specify paths to OpenCL headers and library like the following:
 # cmake -DUSE_GPU=1 -DOpenCL_LIBRARY=/usr/local/cuda/lib64/libOpenCL.so -DOpenCL_INCLUDE_DIR=/usr/local/cuda/include/ ..
 make -j$(nproc)
+# This sets the number of CPUs to the ones available @ docker creation time. Suboptimal.
 
 # Install Python Interface
-RUN apt-get -y install python-pip && \
-pip install setuptools numpy scipy scikit-learn -U && \
-cd LightGBM/python-package && \
-python setup.py install --precompile
+#RUN apt-get -y install python-pip && \
+#pip install setuptools numpy scipy scikit-learn -U && \
+#cd LightGBM/python-package && \
+#python setup.py install --precompile
 
 # Installs google cloud sdk, this is mostly for using gsutil to export model.
 RUN apt-get update && \
@@ -31,9 +32,10 @@ RUN apt-get update && \
     pip install scikit-learn==0.21.3 pandas==0.25.0 && \
     pip install imbalanced-learn==0.5.0 && \
     pip install pyYAML==5.1.2 && \
-#    git clone --recursive https://github.com/Microsoft/LightGBM && \
-#    cd LightGBM/python-package && \
-#    python setup.py install && \
+
+    cd LightGBM/python-package && \
+    python setup.py install --precompile && \
+
     rm -rf /usr/local/src/* && \
     pip install cloudml-hypertune && \
     pip install lightgbm==2.2.3 --install-option=--gpu && \
