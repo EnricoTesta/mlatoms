@@ -13,7 +13,7 @@ RUN apt-get -y install --no-install-recommends git cmake build-essential libboos
 # Installs LGBM w/GPU
 RUN git clone --recursive https://github.com/microsoft/LightGBM && \
 cd LightGBM && \
-mkdir build ; cd build && \
+mkdir build_dir ; cd build_dir && \
 cmake -DUSE_GPU=1 .. && \
 # if you have installed NVIDIA CUDA to a customized location, you should specify paths to OpenCL headers and library like the following:
 # cmake -DUSE_GPU=1 -DOpenCL_LIBRARY=/usr/local/cuda/lib64/libOpenCL.so -DOpenCL_INCLUDE_DIR=/usr/local/cuda/include/ ..
