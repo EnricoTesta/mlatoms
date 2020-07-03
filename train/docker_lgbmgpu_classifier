@@ -25,12 +25,12 @@ cd
 # This sets the number of CPUs to the ones available @ docker creation time. Suboptimal.
 
 # Install Python Interface
-RUN apt-get -y install python3 &&\
-apt-get -y install python3-pip &&\
-echo "alias python=python3" >> ~/.bash_aliases &&\
-source ~/.bash_aliases &&\
-echo "alias pip=pip3" >> ~/.bash_aliases &&\
-source ~/.bash_aliases
+RUN apt-get -y install python3 && \
+apt-get -y install python3-pip && \
+echo "alias python=python3" >> ~/.bash_aliases && \
+/bin/bash -c "source ~/.bash_aliases" && \
+echo "alias pip=pip3" >> ~/.bash_aliases && \
+/bin/bash -c "source ~/.bash_aliases"
 #pip install setuptools numpy scipy scikit-learn -U && \
 #cd LightGBM/python-package && \
 #python setup.py install --precompile
