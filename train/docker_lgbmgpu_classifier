@@ -2,6 +2,24 @@ FROM ubuntu:16.04
 WORKDIR /root
 
 
+# Install Python3
+RUN apt-get -y install python3 && \
+apt-get -y install python3-pip && \
+update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+
+# Install packages
+RUN pip install scikit-learn==0.21.3 pandas==0.25.0 && \
+    pip install imbalanced-learn==0.5.0 && \
+    pip install pyYAML==5.1.2 && \
+    pip install cloudml-hypertune
+#echo "alias python=python3" >> ~/.bash_aliases && \
+#/bin/bash -c "source ~/.bash_aliases" && \
+#echo "alias pip=pip3" >> ~/.bash_aliases && \
+#/bin/bash -c "source ~/.bash_aliases"
+#pip install setuptools numpy scipy scikit-learn -U && \
+#cd LightGBM/python-package && \
+#python setup.py install --precompile
+
 # Installs minimum CUDA drivers
 RUN apt-get update && \
 apt-get -y install --no-install-recommends nvidia-375 && \
@@ -22,33 +40,17 @@ cmake -DUSE_GPU=1 .. && \
 # cmake -DUSE_GPU=1 -DOpenCL_LIBRARY=/usr/local/cuda/lib64/libOpenCL.so -DOpenCL_INCLUDE_DIR=/usr/local/cuda/include/ ..
 make -j$(nproc) && \
 cd
-# This sets the number of CPUs to the ones available @ docker creation time. Suboptimal.
-
-# Install Python Interface
-RUN apt-get -y install python3 && \
-apt-get -y install python3-pip && \
-echo "alias python=python3" >> ~/.bash_aliases && \
-/bin/bash -c "source ~/.bash_aliases" && \
-echo "alias pip=pip3" >> ~/.bash_aliases && \
-/bin/bash -c "source ~/.bash_aliases"
-#pip install setuptools numpy scipy scikit-learn -U && \
-#cd LightGBM/python-package && \
-#python setup.py install --precompile
 
 # Installs google cloud sdk, this is mostly for using gsutil to export model.
 SHELL ["/bin/bash", "-c"]
 RUN apt-get update && \
     apt-get install -y cmake build-essential gcc g++ git wget && \
-    pip3 install scikit-learn==0.21.3 pandas==0.25.0 && \
-    pip3 install imbalanced-learn==0.5.0 && \
-    pip3 install pyYAML==5.1.2 && \
 
     cd LightGBM/python-package && \
-    python3 setup.py install --precompile && \
+    python setup.py install --precompile && \
 
     rm -rf /usr/local/src/* && \
-    pip3 install cloudml-hypertune && \
-    pip3 install lightgbm==2.2.3 --install-option=--gpu && \
+    pip install lightgbm==2.2.3 --install-option=--gpu && \
     wget -nv \
     https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz && \
     mkdir /root/tools && \
