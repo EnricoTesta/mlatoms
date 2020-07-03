@@ -4,7 +4,7 @@ WORKDIR /root
 
 # Installs minimum CUDA drivers
 RUN apt-get update && \
-apt-get -y install --no-install-recommends nvidia-driver-375 && \
+apt-get -y install --no-install-recommends nvidia-375 && \
 apt-get -y install --no-install-recommends nvidia-opencl-icd-375 nvidia-opencl-dev opencl-headers
 
 # Installs dependencies
