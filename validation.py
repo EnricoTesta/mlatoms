@@ -1,7 +1,7 @@
 from sklearn.model_selection import StratifiedKFold, KFold
 from imblearn.under_sampling import RandomUnderSampler
 from abc import ABC, abstractmethod
-from pandas import concat
+from pandas import concat, DataFrame
 import numpy as np
 
 
@@ -75,9 +75,10 @@ class GroupStrataKFoldValidationSchema(BaseValidationSchema):
             #     print(groups[item])
             for value in validation_groups:
                     df_list.append(kwargs['stratification_variable'] == groups[value])
-            validation_indexes = concat(df_list, axis=1).sum(axis=1)
-            train_indexes = 1-validation_indexes
-            x['integer_based_index'] = range(x.shape[0])
+            validation_indexes = DataFrame(concat(df_list, axis=1).sum(axis=1), columns=['flag'])
+            train_indexes = DataFrame(1-validation_indexes)
+            validation_indexes['integer_based_index'] = range(x.shape[0])
+            train_indexes['integer_based_index'] = range(x.shape[0])
 
             # if not sample_list:
             #     sample_list = list(x.sample(5).index)
@@ -86,4 +87,4 @@ class GroupStrataKFoldValidationSchema(BaseValidationSchema):
             #                                                                          kwargs['stratification_variable'].loc[item].values[0],
             #                                                                          validation_indexes.loc[item]))
 
-            yield x['integer_based_index'].loc[train_indexes == 1].values, x['integer_based_index'].loc[validation_indexes == 1].values
+            yield train_indexes['integer_based_index'].loc[train_indexes['flag'] == 1].values, validation_indexes['integer_based_index'].loc[validation_indexes['flag'] == 1].values
