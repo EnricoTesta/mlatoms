@@ -20,9 +20,9 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/scorer_tensorflow:scorer_tf', '-f', './score/docker_tensorflow_scorer', '.' ]
   timeout: 600s
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_autosklearn:class_askl', '-f', './train/docker_askl_classifier', '.' ]
-  timeout: 600s
+#- name: 'gcr.io/cloud-builders/docker'
+#  args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_autosklearn:class_askl', '-f', './train/docker_askl_classifier', '.' ]
+#  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_dummy:class_dummy', '-f', './train/docker_dummy_classifier', '.' ]
   timeout: 600s
@@ -55,7 +55,7 @@ images:
   - '${_GCR_URL}/$PROJECT_ID/scorer_sklearn:scorer_skl'
   - '${_GCR_URL}/$PROJECT_ID/scorer_xgboost:scorer_xgb'
   - '${_GCR_URL}/$PROJECT_ID/scorer_tensorflow:scorer_tf'
-  - '${_GCR_URL}/$PROJECT_ID/classification_autosklearn:class_askl'
+#  - '${_GCR_URL}/$PROJECT_ID/classification_autosklearn:class_askl'
   - '${_GCR_URL}/$PROJECT_ID/classification_dummy:class_dummy'
   - '${_GCR_URL}/$PROJECT_ID/classification_lda:class_lda'
   - '${_GCR_URL}/$PROJECT_ID/classification_lgbm:class_lgbm'
