@@ -68,4 +68,4 @@ images:
   - '${_GCR_URL}/$PROJECT_ID/classification_qda:class_qda'
   - '${_GCR_URL}/$PROJECT_ID/classification_xgboost:class_xgb'
   - '${_GCR_URL}/$PROJECT_ID/classification_ffnn:class_ffnn'
-timeout: 3600s
+timeout: 7200s
