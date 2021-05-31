@@ -12,7 +12,7 @@ update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 
 # Install packages
 RUN pip3 install scikit-learn==0.22.1 pandas==0.25.0 && \
-    pip3 install imbalanced-learn==0.8.0 && \
+    pip3 install imbalanced-learn==0.5.0 && \
     pip3 install pyYAML==5.1.2 && \
     pip3 install cloudml-hypertune
 #echo "alias python=python3" >> ~/.bash_aliases && \
