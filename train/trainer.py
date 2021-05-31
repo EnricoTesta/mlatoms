@@ -99,7 +99,7 @@ class Trainer(Atom):
         elif self.algo.__name__ in REGRESSION_ESTIMATORS:
             metrics_dict['MSE'] = {'func': metrics.mean_squared_error, 'kwargs': {}}
             metrics_dict['MAE'] = {'func': metrics.mean_absolute_error, 'kwargs': {}}
-            metrics_dict['MAPE'] = {'func': metrics.mean_absolute_percentage_error, 'kwargs': {}}
+            # metrics_dict['MAPE'] = {'func': metrics.mean_absolute_percentage_error, 'kwargs': {}}
         else:
             raise NotImplementedError
         return metrics_dict
