@@ -1,4 +1,4 @@
-FROM python:3.5.7-buster
+FROM python:3.7.10-buster
 WORKDIR /root
 
 # Installs google cloud sdk, this is mostly for using gsutil to export model.
