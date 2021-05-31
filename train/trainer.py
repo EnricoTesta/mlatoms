@@ -13,7 +13,7 @@ CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
                              'XGBClassifier', 'AutoSklearnClassifier',
                              'LinearDiscriminantAnalysis', 'QuadraticDiscriminantAnalysis',
                              'DummyClassifier', 'Sequential']
-REGRESSION_ESTIMATORS = ['LinearRegression']
+REGRESSION_ESTIMATORS = ['LinearRegression', 'LGBMRegressor']
 BENCHMARK_ESTIMATORS = ['DummyClassifier']
 CV_FOLDS = 3
 DEFAULT_IMBALANCE_TOLERANCE = 0.20
@@ -97,7 +97,9 @@ class Trainer(Atom):
                 metrics_dict['fbeta'] = {'func': metrics.fbeta_score, 'kwargs': {'average': 'weighted'}}
 
         elif self.algo.__name__ in REGRESSION_ESTIMATORS:
-            raise NotImplementedError
+            metrics_dict['MSE'] = {'func': metrics.mean_squared_error, 'kwargs': {}}
+            metrics_dict['MAE'] = {'func': metrics.mean_absolute_error, 'kwargs': {}}
+            metrics_dict['MAPE'] = {'func': metrics.mean_absolute_percentage_error, 'kwargs': {}}
         else:
             raise NotImplementedError
         return metrics_dict
@@ -229,7 +231,7 @@ class Trainer(Atom):
             try:
                 if name == 'fbeta':
                     metric_score = metric['func'](labeled_predictions['ground_truth'].values,
-                                                  labeled_predictions['label'].values, 1, **metric['kwargs'])
+                                                  labeled_predictions['pred_response'].values, 1, **metric['kwargs'])
                 elif name == 'pearson_corr' or name == 'spearman_corr':
                     metric_score = metric['func'](labeled_predictions['ground_truth'].values,
                                           squeeze_proba(labeled_predictions.iloc[:, 0:-2]), **metric['kwargs'])  # y_true, y_pred
@@ -239,7 +241,7 @@ class Trainer(Atom):
                                               labeled_predictions.iloc[:, 0:-2].values, **metric['kwargs'])  # y_true, y_pred
                     except ValueError:  # metric does not support probabilities
                         metric_score = metric['func'](labeled_predictions['ground_truth'].values,
-                                                      labeled_predictions['label'].values, **metric['kwargs'])
+                                                      labeled_predictions['pred_response'].values, **metric['kwargs'])
             except:
                 metric_score = np.nan
             d['test_' + name] = metric_score
@@ -250,7 +252,10 @@ class Trainer(Atom):
     def _compute_feature_exposure(self, labeled_predictions, features):
         pearson = []
         spearman = []
-        pred = squeeze_proba(labeled_predictions.iloc[:, 0:-2])
+        if labeled_predictions.shape[1] == 2: # no probabilities involved
+            pred = labeled_predictions['pred_response'].values
+        else:
+            pred = squeeze_proba(labeled_predictions.iloc[:, 0:-2])
         for f in features:
             relevant_indexes = features[f].notnull()
             p = pearson_corrcoef(features[f][relevant_indexes], pred[relevant_indexes])
@@ -268,12 +273,12 @@ class Trainer(Atom):
         pred = DataFrame(self.predict(trained_model, x), index=x.index)
         predictions_col_names = []
         if pred.shape[1] == 1:
-            predictions_col_names.append("value")  # either class labels or regression values
+            predictions_col_names.append("pred_response")  # either class labels or regression values
         else:
             for i in range(pred.shape[1]):
                 predictions_col_names.append("probability_" + str(i))
-            pred['label'] = pred.idxmax(axis=1)  # add class label
-            predictions_col_names.append('label')
+            pred['pred_response'] = pred.idxmax(axis=1)  # add class label
+            predictions_col_names.append('pred_response')
         pred.columns = predictions_col_names
 
         # Get metrics
@@ -382,8 +387,11 @@ class Trainer(Atom):
         # Export
         unique_id = self.generate_unique_id()
         self.export_model_file(self.trained_model, 'model_' + unique_id)
-        self.export_file({'algo': {**self.get_algo_params(validation=False, train_info=train_info)},
-                          'fit': {**self.get_fit_params(validation=False)}}, 'params_' + unique_id + '.json')
+        export_params_dict = {'algo': {**self.get_algo_params(validation=False, train_info=train_info)},
+                              'fit': {**self.get_fit_params(validation=False)}}
+        if 'custom_loss' in export_params_dict['algo'].keys(): # object is not JSON serializable
+            export_params_dict['algo']['custom_loss'] = export_params_dict['algo']['custom_loss'].__class__.__name__
+        self.export_file(export_params_dict, 'params_' + unique_id + '.json')
         self.export_file(self.predictions, 'predictions_' + unique_id + '.csv')
         self.export_file(self.validation, 'info_' + unique_id + '.csv')
         self.export_file(self.stratified_validation, 'stratified_info_' + unique_id + '.csv')
