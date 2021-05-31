@@ -3,7 +3,7 @@ steps:
 #  args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_lgbmgpu:class_lgbmgpu', '-f', './train/docker_lgbmgpu_classifier', '.' ]
 #  timeout: 1200s
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/customRegression_lgbm:cusReg_lgbm', '-f', './train/docker_lgbm_customRegression', '.' ]
+  args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/customregression_lgbm:cusreg_lgbm', '-f', './train/docker_lgbm_customRegression', '.' ]
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/aggregator:aggregator', '-f', './postprocess/docker_aggregator', '.' ]
@@ -51,7 +51,7 @@ steps:
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_ffnn:class_ffnn', '-f', './train/docker_ffnn_classifier', '.' ]
   timeout: 600s
 images:
-  - '${_GCR_URL}/$PROJECT_ID/customRegression_lgbm:cusReg_lgbm'
+  - '${_GCR_URL}/$PROJECT_ID/customregression_lgbm:cusreg_lgbm'
 #  - '${_GCR_URL}/$PROJECT_ID/classification_lgbmgpu:class_lgbmgpu'
   - '${_GCR_URL}/$PROJECT_ID/aggregator:aggregator'
   - '${_GCR_URL}/$PROJECT_ID/data_evaluator:data_evaluator'
