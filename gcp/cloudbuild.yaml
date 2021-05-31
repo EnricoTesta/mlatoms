@@ -3,7 +3,7 @@ steps:
 #  args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_lgbmgpu:class_lgbmgpu', '-f', './train/docker_lgbmgpu_classifier', '.' ]
 #  timeout: 1200s
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/customregression_lgbm:cusreg_lgbm', '-f', './train/docker_lgbm_customRegression', '.' ]
+  args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/customregression_lgbm:cusreg_lgbm', '-f', './train/docker_lgbm_custom', '.' ]
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/aggregator:aggregator', '-f', './postprocess/docker_aggregator', '.' ]
