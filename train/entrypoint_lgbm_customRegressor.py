@@ -194,7 +194,7 @@ def main():
 
     # Make param dict
     param_dict = {'algo': {}, 'fit': {}, 'read': {'encode_features_to_int': False, 'encode_features_to_one_hot': True,
-                                                  'encode_target_to_int': True, 'encode_target_to_one_hot': False}}
+                                                  'encode_target_to_int': False, 'encode_target_to_one_hot': False}}
     for item in args_dict:
         if item not in ('model_dir', 'train_files', 'hypertune_loss', 'early_stopping_rounds', 'custom_loss'):
             param_dict['algo'][item] = args_dict[item]
