@@ -31,7 +31,7 @@ def get_args():
     parser.add_argument(
         '--n_estimators',
         type=int,
-        default=20,
+        default=2000,
         metavar='n_estimators',
         help='Number of boosted trees to fit.')
     parser.add_argument(
@@ -94,8 +94,8 @@ def get_args():
         metavar='hypertune_loss',
         help='Hypertune loss name')
     parser.add_argument(
-        '--custom-loss',
-        default='CustomMSEVarianceDecay',
+        '--custom_loss',
+        default=None,
         metavar='custom_loss',
         help='Custom loss name')
 
@@ -200,7 +200,7 @@ def main():
             param_dict['algo'][item] = args_dict[item]
         elif item == 'early_stopping_rounds' and args_dict[item] is not None:
             param_dict['fit'][item] = args_dict[item]  # must specify validation data and evaluation metric @ fit time
-        elif item == 'custom_loss':
+        elif item == 'custom_loss' and args_dict[item] is not None:
             param_dict['algo']['custom_loss'] = eval(args_dict[item] + '()') # instantiate custom loss
 
     t = LGBMTrainer(data_path=args.train_files, model_path=args.model_dir, algo=LGBMRegressor,
