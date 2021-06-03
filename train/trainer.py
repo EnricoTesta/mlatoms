@@ -145,15 +145,15 @@ class Trainer(Atom):
         # Build stratification variable
         tmp_var = stratification_df.astype(str)
         stratification_variable_name = 'stratified_'
+        strat_var = None
         for column in tmp_var.columns:
             try:
                 strat_var += tmp_var[column]
-            except NameError:
+            except TypeError:
                 strat_var = tmp_var[column]
             stratification_variable_name += column + '_'
-        stratification_df[stratification_variable_name[0:-1]] = strat_var
-        return DataFrame(stratification_df[stratification_variable_name[0:-1]]), \
-               unique(stratification_df[stratification_variable_name[0:-1]])
+        return DataFrame(data=strat_var.values, columns=[stratification_variable_name[0:-1]], index=strat_var.index), \
+               unique(strat_var)
 
     def generate_validation_schemas(self, stratification):
         # TODO: move this to validation.py as a function
