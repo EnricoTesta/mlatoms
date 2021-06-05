@@ -4,66 +4,51 @@ steps:
 #  timeout: 1200s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/customregression_lgbm:cusreg_lgbm', '-f', './train/docker_lgbm_custom', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/aggregator:aggregator', '-f', './postprocess/docker_aggregator', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/data_evaluator:data_evaluator', '-f', './preprocess/docker_data_evaluator', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/scorer_lightgbm:scorer_lgbm', '-f', './score/docker_lgbm_scorer', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/scorer_sklearn:scorer_skl', '-f', './score/docker_sklearn_scorer', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/scorer_xgboost:scorer_xgb', '-f', './score/docker_xgboost_scorer', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/scorer_tensorflow:scorer_tf', '-f', './score/docker_tensorflow_scorer', '.' ]
-  waitFor: ['-']
   timeout: 600s
 #- name: 'gcr.io/cloud-builders/docker'
 #  args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_autosklearn:class_askl', '-f', './train/docker_askl_classifier', '.' ]
 #  timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_dummy:class_dummy', '-f', './train/docker_dummy_classifier', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_lda:class_lda', '-f', './train/docker_LDA_classifier', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_lgbm:class_lgbm', '-f', './train/docker_lgbm_classifier', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_rf:class_rf', '-f', './train/docker_randomforest_classifier', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_sklearn_logisticregression:class_skl_logreg', '-f', './train/docker_logisticRegression_classifier', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_qda:class_qda', '-f', './train/docker_QDA_classifier', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_xgboost:class_xgb', '-f', './train/docker_xgb_classifier', '.' ]
-  waitFor: ['-']
   timeout: 600s
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', '${_GCR_URL}/$PROJECT_ID/classification_ffnn:class_ffnn', '-f', './train/docker_ffnn_classifier', '.' ]
-  waitFor: ['-']
   timeout: 600s
 images:
   - '${_GCR_URL}/$PROJECT_ID/customregression_lgbm:cusreg_lgbm'
