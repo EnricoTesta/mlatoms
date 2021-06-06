@@ -19,7 +19,8 @@ CV_FOLDS = 3
 DEFAULT_IMBALANCE_TOLERANCE = 0.20
 HYPERTUNE_LOSSES = {'binary_crossentropy': 'log_loss',
                     'categorical_crossentropy': 'log_loss',
-                    'accuracy': 'accuracy'}
+                    'accuracy': 'accuracy',
+                    'mean_squared_error': 'MSE'}
 
 
 def spearman_corrcoef(y, y_pred):
