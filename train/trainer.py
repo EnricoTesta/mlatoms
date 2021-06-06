@@ -13,7 +13,7 @@ CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
                              'XGBClassifier', 'AutoSklearnClassifier',
                              'LinearDiscriminantAnalysis', 'QuadraticDiscriminantAnalysis',
                              'DummyClassifier', 'Sequential']
-REGRESSION_ESTIMATORS = ['LinearRegression', 'LGBMRegressor']
+REGRESSION_ESTIMATORS = ['LinearRegression', 'LGBMRegressor', 'DummyRegressor']
 BENCHMARK_ESTIMATORS = ['DummyClassifier', 'DummyRegressor']
 CV_FOLDS = 3
 DEFAULT_IMBALANCE_TOLERANCE = 0.20
