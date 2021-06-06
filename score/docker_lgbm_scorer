@@ -4,7 +4,8 @@ WORKDIR /root
 # Installs google cloud sdk, this is mostly for using gsutil to export model.
 RUN apt-get update && \
     apt-get install -y cmake build-essential gcc g++ git wget && \
-    pip install scikit-learn==0.21.3 pandas==0.25.0 && \
+    pip install scikit-learn==0.22.1 pandas==0.25.0 && \
+    pip install numpy==1.19.5 && \
     pip install imbalanced-learn==0.5.0 && \
     pip install pyYAML==5.1.2 && \
     git clone --recursive https://github.com/Microsoft/LightGBM && \
@@ -12,7 +13,7 @@ RUN apt-get update && \
     python setup.py install && \
     rm -rf /usr/local/src/* && \
     pip install cloudml-hypertune && \
-    pip install lightgbm==2.2.3 && \
+    pip install lightgbm==3.2.1 && \
     wget -nv \
     https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz && \
     mkdir /root/tools && \
