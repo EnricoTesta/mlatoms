@@ -1,0 +1,7 @@
+TARGET_COLUMN: 'target'
+ID_COLUMN: 'id'
+PROBLEM_TYPE: 'regression'
+STRATIFICATION_COLUMN:
+  - 'era'
+USELESS_COLUMN:
+  - 'data_type'
