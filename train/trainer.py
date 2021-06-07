@@ -77,13 +77,13 @@ class Trainer(Atom):
 
     def _get_metrics_dict(self, target):
         metrics_dict = {}
+        metrics_dict['spearman_corr'] = {'func': spearman_corrcoef, 'kwargs': {}}
+        metrics_dict['pearson_corr'] = {'func': pearson_corrcoef, 'kwargs': {}}
         if self.algo.__name__ in CLASSIFICATION_ESTIMATORS:
 
             metrics_dict['accuracy'] = {'func': metrics.accuracy_score, 'kwargs': {}}
             metrics_dict['log_loss'] = {'func': metrics.log_loss, 'kwargs': {}}
             metrics_dict['matthews_corr'] = {'func': metrics.matthews_corrcoef, 'kwargs': {}}
-            metrics_dict['spearman_corr'] = {'func': spearman_corrcoef, 'kwargs': {}}
-            metrics_dict['pearson_corr'] = {'func': pearson_corrcoef, 'kwargs': {}}
             if self.problem_specs['binary']:
                 metrics_dict['roc_auc'] = {'func': metrics.roc_auc_score, 'kwargs': {}}  # average: 'macro' is default
                 metrics_dict['hinge_loss'] = {'func': metrics.hinge_loss, 'kwargs': {}}
