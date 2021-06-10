@@ -52,6 +52,11 @@ def main():
     param_dict = {'read': {'encode_features_to_int': False, 'encode_features_to_one_hot': True,
                                                   'encode_target_to_int': False, 'encode_target_to_one_hot': False}}
     for item in args_dict:
+        if item == 'use_proba':
+            try:
+                param_dict[item] = True if args_dict[item] > 0 else param_dict[item] = False
+            except TypeError:
+                param_dict[item] = True if args_dict[item] == "1" else param_dict[item] = False
         param_dict[item] = args_dict[item]
 
     t = LGBMBatchPredictor(data_path=param_dict['score_dir'], model_path=param_dict['model_file'], params=param_dict,
