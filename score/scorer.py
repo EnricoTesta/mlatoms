@@ -44,13 +44,16 @@ class BatchPredictor(Atom):
 
     @staticmethod
     def generate_column_names(result):
-        if result.shape[1] == 1:
+        try:
+            if result.shape[1] == 1:
+                return ['value']  # regression setting
+            else:
+                names = []
+                for i in range(result.shape[1]):
+                    names.append('probability_' + str(i))  # classification setting
+                return names
+        except IndexError:
             return ['value']  # regression setting
-        else:
-            names = []
-            for i in range(result.shape[1]):
-                names.append('probability_' + str(i))  # classification setting
-            return names
 
     def retrieve_preprocess(self):
         if self.preprocess_path is not None:
@@ -128,8 +131,12 @@ class BatchPredictor(Atom):
         df = self.data.merge(squeezed_scores, left_index=True, right_index=True)\
             .merge(self.stratification_df, left_index=True, right_index=True)
 
-        neutralized_scores = df.groupby(self.info["STRATIFICATION_COLUMN"])\
-            .apply(lambda x: self.normalize_and_neutralize(x, ["preds"], features, proportion))
+        try:
+            neutralized_scores = df.groupby(self.info["STRATIFICATION_COLUMN"])\
+                .apply(lambda x: self.normalize_and_neutralize(x, ["preds"], features, proportion))
+        except:
+            neutralized_scores = df.groupby(self.info["STRATIFICATION_COLUMN"]) \
+                .apply(lambda x: self.normalize_and_neutralize(x, ["value"], features, proportion))
 
         scaler = MinMaxScaler()
         scaled_neutralized_scores = DataFrame([neutralized_scores.index, scaler.fit_transform(neutralized_scores).flatten()]).transpose()
@@ -175,8 +182,9 @@ class BatchPredictor(Atom):
             logger.info("Predicting values...")
             outputs = self.model_predict(preprocessed_inputs)
             column_names = self.generate_column_names(outputs)
-            scores = DataFrame(np.concatenate((ids.values.reshape(-1, 1), outputs), axis=1),
+            scores = DataFrame(np.concatenate((ids.values.reshape(-1, 1), outputs.reshape(-1, 1)), axis=1),
                      columns=['id'] + column_names)
+            scores['value'] =scores['value'].astype(float)
 
         # Neutralize scores (a.k.a. remove linear exposures with features)
         neutralized_scores = self.neutralize_scores(scores)
