@@ -161,8 +161,7 @@ class BatchPredictor(Atom):
         self.restore_model()
 
         # Score model
-        ids, raw_data = self.default_preprocess(self.info, self.data)
-        preprocessed_inputs = raw_data
+        ids, preprocessed_inputs = self.default_preprocess(self.info, self.data)
 
         try:
             for item in self._preprocessor:
@@ -175,16 +174,22 @@ class BatchPredictor(Atom):
         if self._use_probabilities:
             logger.info("Predicting probabilities...")
             probabilities = self.model_predict_proba(preprocessed_inputs)
+            del preprocessed_inputs
             column_names = self.generate_column_names(probabilities)
             scores = DataFrame(np.concatenate((ids.values.reshape(-1, 1), probabilities), axis=1),
                      columns=['id'] + column_names)
+            del probabilities
         else:
             logger.info("Predicting values...")
             outputs = self.model_predict(preprocessed_inputs)
+            del preprocessed_inputs
             column_names = self.generate_column_names(outputs)
             scores = DataFrame(np.concatenate((ids.values.reshape(-1, 1), outputs.reshape(-1, 1)), axis=1),
                      columns=['id'] + column_names)
             scores['value'] =scores['value'].astype(float)
+            del outputs
+
+        del ids
 
         # Neutralize scores (a.k.a. remove linear exposures with features)
         neutralized_scores = self.neutralize_scores(scores)
