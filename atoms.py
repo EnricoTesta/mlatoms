@@ -8,7 +8,7 @@ from datetime import datetime as dt
 from shutil import rmtree
 from pickle import dump
 from yaml import safe_load
-from pandas import read_csv, DataFrame, concat, get_dummies
+from pandas import read_csv, read_hdf, DataFrame, concat, get_dummies
 from pandas.api.types import CategoricalDtype
 
 
@@ -300,6 +300,24 @@ class Atom:
         except (TypeError, KeyError):
             return None
 
+
+    def _read_data_from_file(self, file_path, data_type_dict):
+        file_format = file_path.split(".")[1]
+        if file_format == 'csv':
+            if "USELESS_COLUMN" in self.info:
+                return read_csv(file_path, usecols=lambda w: w not in self.info["USELESS_COLUMN"], dtype=data_type_dict)
+            else:
+                return read_csv(file_path, dtype=data_type_dict)
+        elif file_format == 'h5':
+            tmp = read_hdf(file_path)
+            if "USELESS_COLUMN" in self.info:
+                tmp = tmp[[col for col in tmp.columns if col not in self.info["USELESS_COLUMN"]]]
+            if data_type_dict:
+                tmp.astype(data_type_dict, copy=False)
+            return tmp
+        else:
+            raise ValueError(f"Allowed file formats are: 'csv', 'h5'. Found {file_format}.")
+
     def read_data(self, encode_features_to_int=False, encode_features_to_one_hot=False,
                   encode_target_to_int=False, encode_target_to_one_hot=False):
         """
@@ -314,15 +332,11 @@ class Atom:
             # Read in-memory
             # TODO: directly read ordered columns!
             file_list = [item for item in os.listdir(self.local_path)
-                         if os.path.isfile(os.path.join(self.local_path, item)) and item.split(".")[-1] == 'csv']
+                         if os.path.isfile(os.path.join(self.local_path, item)) and item.split(".")[-1] in ('csv', 'h5')]
             d = self._generate_data_type_dict()
             dfs = []
             for file in file_list:
-                if "USELESS_COLUMN" in self.info:
-                    dfs.append(read_csv(os.path.join(self.local_path, file),
-                                        usecols=lambda w: w not in self.info["USELESS_COLUMN"], dtype=d))
-                else:
-                    dfs.append(read_csv(os.path.join(self.local_path, file), dtype=d))
+                dfs.append(self._read_data_from_file(os.path.join(self.local_path, file), data_type_dict=d))
             self.data = concat(dfs, axis=0)
             self.data.set_index(self.info["ID_COLUMN"], inplace=True, drop=True)
 
