@@ -316,7 +316,7 @@ class Atom:
                 tmp.astype(data_type_dict, copy=False)
             return tmp
         else:
-            raise ValueError(f"Allowed file formats are: 'csv', 'h5'. Found {file_format}.")
+            raise ValueError("Allowed file formats are: 'csv', 'h5'. Found %s.".format(file_format))
 
     def read_data(self, encode_features_to_int=False, encode_features_to_one_hot=False,
                   encode_target_to_int=False, encode_target_to_one_hot=False):
