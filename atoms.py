@@ -356,7 +356,7 @@ class Atom:
             self.data.rename(columns=clean_col_names, inplace=True)
 
         except:
-            raise Exception("Unable to load data csv.")
+            raise Exception("Unable to load data in memory.")
 
     def export_file(self, serializable_object, file_name):
         """
