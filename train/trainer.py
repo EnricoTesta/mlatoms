@@ -1,5 +1,6 @@
 import numpy as np
 import hypertune
+from logging import getLogger, StreamHandler, INFO
 from shutil import rmtree
 from pandas import DataFrame, Series, concat, unique
 from validation import KFoldValidationSchema, StratifiedKFoldValidationSchema, GroupStrataKFoldValidationSchema
@@ -9,6 +10,9 @@ from atoms import Atom, squeeze_proba
 from scipy.stats import spearmanr, pearsonr
 
 
+logger = getLogger('trainer_logger')
+logger.setLevel(INFO)
+logger.addHandler(StreamHandler())
 CLASSIFICATION_ESTIMATORS = ['LogisticRegression', 'LGBMClassifier',
                              'XGBClassifier', 'AutoSklearnClassifier',
                              'LinearDiscriminantAnalysis', 'QuadraticDiscriminantAnalysis',
@@ -158,6 +162,8 @@ class Trainer(Atom):
 
     def generate_validation_schemas(self, stratification):
         # TODO: move this to validation.py as a function
+
+        logger.info("Generating validation schemas...")
         schemas = {}
         if stratification is None:
             schemas['KFold'] = {'schema': KFoldValidationSchema(params={'n_splits': CV_FOLDS, 'shuffle': False}),
@@ -189,6 +195,8 @@ class Trainer(Atom):
         :param validation_schemas: dict of dicts (ValidationSchema objects + dict of kwargs)
         :return: validation, stratified_validation, pred
         """
+
+        logger.info("Starting validation assessment...")
         validation_df_list = []
         stratified_validation_df_list = []
         pred_df_list = []
@@ -196,8 +204,10 @@ class Trainer(Atom):
         metrics_dict = self._get_metrics_dict(y)
         for key, item in validation_schemas.items():
 
+            logger.info("Working on validation schema {}...".format(key))
             # Evaluate validation schema
             for train_idx, validation_idx in item['schema'].split(x, y, **item['kwargs']):  # sklearn-like generators
+                logger.info("Training model on data split...")
                 trained_model = self.fit(x.iloc[train_idx, :], y.iloc[train_idx], self.get_algo_params(validation=True),
                                          self.get_fit_params(**{**self.get_fit_params_dict(x, y, train_idx,
                                                                                            validation_idx),
@@ -227,6 +237,8 @@ class Trainer(Atom):
                concat(train_information_df_list, axis=0)
 
     def _compute_metrics(self, labeled_predictions, metrics_dict):
+
+        logger.info("Compute metrics...")
         d = {}
         for name, metric in metrics_dict.items():
             try:
@@ -251,6 +263,8 @@ class Trainer(Atom):
         return d
 
     def _compute_feature_exposure(self, labeled_predictions, features):
+
+        logger.info("Compute feature exposure...")
         pearson = []
         spearman = []
         if labeled_predictions.shape[1] == 2: # no probabilities involved
@@ -271,6 +285,7 @@ class Trainer(Atom):
     def get_model_performance(self, trained_model, x, y, metrics_dict):
 
         # Get out-of-fold predictions
+        logger.info("Compute out-of-fold predictions...")
         pred = DataFrame(self.predict(trained_model, x), index=x.index)
         predictions_col_names = []
         if pred.shape[1] == 1:
@@ -283,6 +298,7 @@ class Trainer(Atom):
         pred.columns = predictions_col_names
 
         # Get metrics
+        logger.info("Get labels...")
         if y.shape[1] == 1:
             labeled_pred = pred.merge(y.rename(columns={y.columns[0]: 'ground_truth'}),
                                       left_index=True, right_index=True, copy=False)
@@ -291,8 +307,9 @@ class Trainer(Atom):
             labeled_pred = pred.merge(Series(y.dot(range(y.shape[1])), name='ground_truth'),
                                       left_index=True, right_index=True, copy=False)
         validation = self._compute_metrics(labeled_predictions=labeled_pred, metrics_dict=metrics_dict)
-        validation['test_feature_exposure_pearson'], \
-        validation['test_feature_exposure_spearman'] = self._compute_feature_exposure(labeled_pred, x)
+        # TODO: find alternative. Computing spearman coefficient on each feature is extremely time consuming (over 60% of time). That's because it sorts a very long array each time.
+        #validation['test_feature_exposure_pearson'], \
+        #validation['test_feature_exposure_spearman'] = self._compute_feature_exposure(labeled_pred, x)
 
         # Get stratified metrics
         # TODO: add stratified feature exposure
@@ -373,6 +390,7 @@ class Trainer(Atom):
         self.validation, self.stratified_validation, self.predictions, train_info = self.validation_assessment(x, y, schemas)
 
         # Fit model on entire train data
+        logger.info("Fit model on entire train data...")
         if self.problem_specs["type"] == "classification" and not self.problem_specs["balanced"]:
             rus = RandomUnderSampler(sampling_strategy='not minority', replacement=False)
             resampled_index, _ = rus.fit_resample(x.index.values.reshape(-1, 1), y)
@@ -386,6 +404,7 @@ class Trainer(Atom):
                                           self.get_fit_params(validation=False))
 
         # Export
+        logger.info("Export artifacts...")
         unique_id = self.generate_unique_id()
         self.export_model_file(self.trained_model, 'model_' + unique_id)
         export_params_dict = {'algo': {**self.get_algo_params(validation=False, train_info=train_info)},
@@ -403,6 +422,7 @@ class Trainer(Atom):
         # Report Loss to Hypertune
         if self.hypertune_loss is None or self.validation is None:
             return
+        logger.info("Report hypertune...")
         hpt = hypertune.HyperTune()
         hpt.report_hyperparameter_tuning_metric(
             hyperparameter_metric_tag=self.hypertune_loss,
