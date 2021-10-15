@@ -4,6 +4,7 @@ import numpy
 import string
 import random
 import subprocess
+from logging import getLogger
 from datetime import datetime as dt
 from shutil import rmtree
 from pickle import dump
@@ -12,6 +13,7 @@ from pandas import read_csv, read_hdf, DataFrame, concat, get_dummies
 from pandas.api.types import CategoricalDtype
 
 
+logger = getLogger('atom_logger')
 INFORMATION_OPTIONAL_KEYS = ["STRATIFICATION_COLUMN", "CATEGORICAL_COLUMN", "ORDINAL_COLUMN", "USELESS_COLUMN"]
 
 def squeeze_proba(df, index=False):
@@ -157,7 +159,10 @@ class Atom:
         try:
             model_path_shards = self.model_path.split("/")
             if model_path_shards[0] == 'gs:':
-                metadata_path = '/'.join(model_path_shards[0:6] + ['METADATA'] + ['TRAIN'] + ['metadata.json'])
+                if 'ACTIVE_MODELS' in model_path_shards: # TODO: this is a temporary fix that maintains compatibility with old environment
+                    metadata_path = '/'.join(model_path_shards[0:3] + ['ET'] + [model_path_shards[5]] + ['METADATA'] + ['metadata.json'])
+                else:
+                    metadata_path = '/'.join(model_path_shards[0:6] + ['METADATA'] + ['TRAIN'] + ['metadata.json'])
             else:
                 metadata_path = '/mlatoms/test/modeldir/metadata.json'
         except AttributeError:
@@ -257,7 +262,7 @@ class Atom:
         :param features_flag: bool. If True enables feature encoding
         :param target_flag: bool. If True enables target encoding
         """
-
+        logger.info("Encoding to integers...")
         for col in self._get_columns_to_encode(features_flag, target_flag):
             if self.data[col].dtype.name == 'category':
                 print("Integer-encoding column {}".format(col))
@@ -269,7 +274,7 @@ class Atom:
         :param features_flag: bool. If True enables feature encoding
         :param target_flag: bool. If True enables target encoding
         """
-
+        logger.info("Encoding to one-hot...")
         columns_to_encode = self._get_columns_to_encode(features_flag, target_flag)
         try:
             # Exclude stratification columns from 1-hot encoding
@@ -311,9 +316,18 @@ class Atom:
         elif file_format == 'h5':
             tmp = read_hdf(file_path)
             if "USELESS_COLUMN" in self.info:
-                tmp = tmp[[col for col in tmp.columns if col not in self.info["USELESS_COLUMN"]]]
+                tmp.drop(columns=self.info["USELESS_COLUMN"], inplace=True)
+            tmp.columns = [col.replace("'", "") for col in tmp.columns] # some columns may contain special chars that are not in metadata
             if data_type_dict:
-                tmp.astype(data_type_dict, copy=False)
+                # (!!!) It happened that 2 features were found in metadata but are not present in data.
+                # This causes a crash and should not be possible because metadata are computed on the same file.
+                # Use loop to avoid large memory consumption
+                for col in tmp.columns:
+                    if col != self.info["ID_COLUMN"]:
+                        try:
+                            tmp[col].astype(data_type_dict[col], copy=False)
+                        except KeyError:
+                            logger.warning("Column \'{}\' not found in metadata types. Skip data type cast...".format(col))
             return tmp
         else:
             raise ValueError("Allowed file formats are: 'csv', 'h5'. Found %s.".format(file_format))
@@ -331,6 +345,7 @@ class Atom:
         try:
             # Read in-memory
             # TODO: directly read ordered columns!
+            logger.info("Reading data...")
             file_list = [item for item in os.listdir(self.local_path)
                          if os.path.isfile(os.path.join(self.local_path, item)) and item.split(".")[-1] in ('csv', 'h5')]
             d = self._generate_data_type_dict()
@@ -367,6 +382,8 @@ class Atom:
 
         if serializable_object is None:
             return
+
+        logger.info("Exporting file {}".format(file_name))
 
         tmp_file_name = os.path.join(self.local_path, file_name)
         if file_name.endswith('.json'):
