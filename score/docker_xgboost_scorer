@@ -9,6 +9,7 @@ RUN apt-get update && \
     pip install cloudml-hypertune && \
     pip3 install xgboost==0.81 && \
     pip install pyYAML==5.1.2 && \
+    pip install tables==3.6.1 && \
     wget -nv \
     https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz && \
     mkdir /root/tools && \

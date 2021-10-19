@@ -7,6 +7,7 @@ RUN apt-get update && \
     pip install pandas==0.25.0 && \
     pip install imbalanced-learn==0.5.0 && \
     pip install pyYAML==5.1.2 && \
+    pip install tables==3.6.1 && \
     curl https://raw.githubusercontent.com/automl/auto-sklearn/master/requirements.txt | xargs -n 1 -L 1 pip install && \
     pip install auto-sklearn==0.5.2 && \
     rm -rf /usr/local/src/* && \
