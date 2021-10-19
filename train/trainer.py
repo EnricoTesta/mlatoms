@@ -408,9 +408,16 @@ class Trainer(Atom):
         unique_id = self.generate_unique_id()
         self.export_model_file(self.trained_model, 'model_' + unique_id)
         export_params_dict = {'algo': {**self.get_algo_params(validation=False, train_info=train_info)},
-                              'fit': {**self.get_fit_params(validation=False)}}
+                              'fit': {**self.get_fit_params(validation=False)},
+                              'features': list(x.columns)}
         if 'custom_loss' in export_params_dict['algo'].keys(): # object is not JSON serializable
             export_params_dict['algo']['custom_loss'] = export_params_dict['algo']['custom_loss'].__class__.__name__
+        try:
+            feat_imp = self.trained_model.feature_importances_ / sum(self.trained_model.feature_importances_)
+            feat_imp = DataFrame(zip(x.columns, feat_imp), columns=['feature_name', 'feature_importance'])
+            self.export_file(feat_imp, 'featimp_' + unique_id + '.csv')
+        except:
+            logger.warning("Feature importances not available.")
         self.export_file(export_params_dict, 'params_' + unique_id + '.json')
         self.export_file(self.predictions, 'predictions_' + unique_id + '.csv')
         self.export_file(self.validation, 'info_' + unique_id + '.csv')
