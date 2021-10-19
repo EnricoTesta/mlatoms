@@ -2,7 +2,8 @@ FROM python:3.5.7-buster
 WORKDIR /root
 
 # Installs google cloud sdk, this is mostly for using gsutil to export model.
-RUN sudo apt-get install libhdf5-serial-dev && \
+RUN apt-get update -y && \
+    apt-get install -y libhdf5-dev && \
     pip install pandas==0.25.0 && \
     pip install pyYAML==5.1.2 && \
     pip install tables==3.6.1 && \

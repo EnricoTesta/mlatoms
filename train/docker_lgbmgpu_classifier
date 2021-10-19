@@ -3,7 +3,8 @@ WORKDIR /root
 
 
 # Install Python3
-RUN sudo apt-get install libhdf5-serial-dev && \
+RUN apt-get update -y && \
+    apt-get install -y libhdf5-dev && \
 apt-get update && \
 add-apt-repository ppa:deadsnakes/ppa && \
 apt-get update && \
