@@ -29,10 +29,10 @@ class DataEvaluator(Atom):
         data_size = 0
         for blob in blob_list:
             try:
-                if blob.name[-3:] == 'csv':
+                if blob.name.endswith('csv') or blob.name.endswith('h5'):
                     data_size += blob.size
             except AttributeError:
-                if blob[-3:] == 'csv':
+                if blob.name.endswith('csv') or blob.name.endswith('h5'):
                     data_size += os.path.getsize(os.path.join(self.data_path, blob))
         return data_size/pow(10, 9)  # in GB
 
