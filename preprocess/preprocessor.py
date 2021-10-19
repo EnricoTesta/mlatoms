@@ -1,8 +1,10 @@
 from shutil import rmtree
+from logging import getLogger
 from google.cloud import storage
 from atoms import Atom
 import os
 
+logger = getLogger("preprocess_logger")
 
 class DataEvaluator(Atom):
 
@@ -50,14 +52,21 @@ class DataEvaluator(Atom):
         self.metadata['n_cols'] = self.data.shape[1]
         self.metadata['rows_cols_ratio'] = self.data.shape[0] / self.data.shape[1]
         self.metadata['column_names'] = list(self.data.columns)
-        self.metadata['missing_data_rate'] = self.data.isna().mean(axis=0).to_dict()
-        self.metadata['unique_value_count'] = self.data.nunique(dropna=True).to_dict()
 
+        self.metadata['missing_data_rate'] = self.data.isna().mean(axis=0).to_dict()
+
+        self.metadata['unique_value_count'] = {}
         self.metadata['column_types'] = {}
         self.metadata['column_data_types'] = {}
         self.metadata['category_encodings'] = {}
         self.metadata['category_value_distribution'] = {}
-        for col in self.data.columns:
+        for idx, col in enumerate(self.data.columns):
+
+            logger.info("Processing column %s of %s: %s".format(idx+1, self.metadata['n_cols'], col))
+
+            # Very high memory operation. Do it column-wise.
+            self.metadata['unique_value_count'][col] = self.data[col].nunique(dropna=True)
+
             if self.data.dtypes[col].name == 'object' or col in self.info["CATEGORICAL_COLUMN"] or \
                     (col == self.info["TARGET_COLUMN"] and self.info["PROBLEM_TYPE"] == 'classification'):
                 self.metadata['column_types'][col] = 'categorical'
@@ -74,5 +83,5 @@ class DataEvaluator(Atom):
         # Export metadata
         self.export_file(self.metadata, 'metadata.json')
 
-        # CLean-up
+        # Clean-up
         rmtree(self.local_path)
