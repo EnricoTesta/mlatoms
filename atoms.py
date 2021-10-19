@@ -306,18 +306,28 @@ class Atom:
             return None
 
 
-    def _read_data_from_file(self, file_path, data_type_dict):
+    def _read_data_from_file(self, file_path, columns=None, data_type_dict=None):
         file_format = file_path.split(".")[1]
         if file_format == 'csv':
-            if "USELESS_COLUMN" in self.info:
+            if columns:
+                return read_csv(file_path, usecols=columns, dtype=data_type_dict)
+            elif "USELESS_COLUMN" in self.info:
                 return read_csv(file_path, usecols=lambda w: w not in self.info["USELESS_COLUMN"], dtype=data_type_dict)
             else:
                 return read_csv(file_path, dtype=data_type_dict)
         elif file_format == 'h5':
-            tmp = read_hdf(file_path)
-            if "USELESS_COLUMN" in self.info:
-                tmp.drop(columns=self.info["USELESS_COLUMN"], inplace=True)
-            tmp.columns = [col.replace("'", "") for col in tmp.columns] # some columns may contain special chars that are not in metadata
+            if columns:
+                try:
+                    tmp = read_hdf(file_path, columns=columns)
+                except TypeError: # happens when HDFS file saved in 'fixed' format
+                    tmp = read_hdf(file_path)
+                    tmp.columns = [col.replace("'", "") for col in tmp.columns] # some columns may contain special chars that are not in metadata
+                    tmp = tmp[columns] # this is inefficient as it creates a copy
+            else:
+                tmp = read_hdf(file_path)
+                if "USELESS_COLUMN" in self.info:
+                    tmp.drop(columns=self.info["USELESS_COLUMN"], inplace=True)
+                tmp.columns = [col.replace("'", "") for col in tmp.columns] # some columns may contain special chars that are not in metadata
             if data_type_dict:
                 # (!!!) It happened that 2 features were found in metadata but are not present in data.
                 # This causes a crash and should not be possible because metadata are computed on the same file.
@@ -333,13 +343,14 @@ class Atom:
             raise ValueError("Allowed file formats are: 'csv', 'h5'. Found %s.".format(file_format))
 
     def read_data(self, encode_features_to_int=False, encode_features_to_one_hot=False,
-                  encode_target_to_int=False, encode_target_to_one_hot=False):
+                  encode_target_to_int=False, encode_target_to_one_hot=False, columns=None):
         """
         Load data in memory. Raises exception if operation fails.
         :param encode_features_to_int: bool. If True encodes string features to integers.
         :param encode_features_to_one_hot: bool. If True encodes all categorical features to 1-hot encoded features.
         :param encode_target_to_int: bool. If True encodes string target to integers.
         :param encode_target_to_one_hot: bool. If True encodes categorical target to 1-hot encoded target.
+        :param columns:list. List of columns to read. If None will read all columns.
         """
 
         try:
@@ -351,7 +362,7 @@ class Atom:
             d = self._generate_data_type_dict()
             dfs = []
             for file in file_list:
-                dfs.append(self._read_data_from_file(os.path.join(self.local_path, file), data_type_dict=d))
+                dfs.append(self._read_data_from_file(os.path.join(self.local_path, file), columns=columns, data_type_dict=d))
             self.data = concat(dfs, axis=0)
             self.data.set_index(self.info["ID_COLUMN"], inplace=True, drop=True)
 
