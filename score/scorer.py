@@ -72,10 +72,28 @@ class BatchPredictor(Atom):
     def retrieve_model(self):
         # Fetch model & preprocess from GCS
         try:
-            remote_model_path = "/".join(self.model_path.split("/")[0:-1])
-            os.system(' '.join(['gsutil -m', 'cp -r', remote_model_path, self.local_path]))
+            local_model_path = os.path.join(*[self.local_path] + self.model_path.split("/")[-2:])
+            os.system(' '.join(['gsutil -m', 'cp', self.model_path, local_model_path]))
         except:
             raise ValueError("Model file not found")
+
+    def retrieve_model_metadata(self):
+        # Fetch model & preprocess from GCS
+        try:
+            remote_model_params_path = self.model_path.replace("model", "params").replace(".pkl", ".json")
+            local_metadata_path = os.path.join(*[self.local_path] + remote_model_params_path.split("/")[-2:])
+            os.system(' '.join(['gsutil -m', 'cp', remote_model_params_path, local_metadata_path]))
+        except:
+            raise ValueError("Model params file not found")
+
+    def retrieve_model_featimp(self):
+        # Fetch model & preprocess from GCS
+        try:
+            remote_model_featimp_path = self.model_path.replace("model", "featimp").replace(".pkl", ".csv")
+            local_featimp_path = os.path.join(*[self.local_path] + remote_model_featimp_path.split("/")[-2:])
+            os.system(' '.join(['gsutil -m', 'cp', remote_model_featimp_path, local_featimp_path]))
+        except:
+            raise ValueError("Feature importance file not found")
 
     def restore_preprocess(self):
         # Restore preprocess
@@ -136,7 +154,10 @@ class BatchPredictor(Atom):
 
     @staticmethod
     def _neutralize(df, columns, by, proportion=1.0):
-        df_32 = df.astype('float32', copy=True) # ensure data type compatibility with np.linalg
+        d = {}
+        for col in columns + by:
+            d[col] = 'float32'
+        df_32 = df.astype(d, copy=True) # ensure data type compatibility with np.linalg. Cast only needed columns to avoid conflicts (for exampe era 'X' cannot be cast to float32)
         scores = df_32[columns]
         exposures = df_32[by].values
 
@@ -167,7 +188,7 @@ class BatchPredictor(Atom):
         # Select features to neutralize on. At most 300 features to neutralize on.
         if self.model_feature_importance is not None:
             relevant_features_df = self.model_feature_importance.loc[self.model_feature_importance['feature_importance'] > 0].sort_values('feature_importance', ascending=False)
-            if relevant_features_df.shape[1] <= 300:
+            if relevant_features_df.shape[0] <= 300:
                 features = list(relevant_features_df['feature_name'])
             else:
                 features = list(relevant_features_df['feature_name'].iloc[0:300])
@@ -175,10 +196,17 @@ class BatchPredictor(Atom):
             features = self.data.columns
         else:
             features = self.data.columns[0:300]
-        df = self.data.merge(squeezed_scores, left_index=True, right_index=True)\
+        df = self.data[features].merge(squeezed_scores, left_index=True, right_index=True)\
             .merge(self.stratification_df, left_index=True, right_index=True)
 
         try:
+            # df_groupby = df.groupby(self.info["STRATIFICATION_COLUMN"])
+            # for group in df_groupby.groups.keys():
+            #     # print(f"Running on value {group}")
+            #     try:
+            #         self.normalize_and_neutralize(df_groupby.get_group(group), ["preds"], features, proportion)
+            #     except:
+            #         print(f"Error found on group {group}")
             neutralized_scores = df.groupby(self.info["STRATIFICATION_COLUMN"])\
                 .apply(lambda x: self.normalize_and_neutralize(x, ["preds"], features, proportion))
         except:
@@ -201,6 +229,8 @@ class BatchPredictor(Atom):
         self.read_metadata()
         self.retrieve_preprocess()
         self.retrieve_model()
+        self.retrieve_model_metadata()
+        self.retrieve_model_featimp()
         self.read_model_metadata()
         strat_column = self.info["STRATIFICATION_COLUMN"] if "STRATIFICATION_COLUMN" in self.info.keys() else []
         cols_to_read = [self.info["ID_COLUMN"]] + strat_column + self.model_metadata['features']
@@ -256,9 +286,9 @@ class BatchPredictor(Atom):
                                os.path.join(self._output_dir, 'results.csv')])
         if self._output_dir.startswith("gs://"):
             shards = self._output_dir.split("/")
-            prefix = shards[0:-2]
-            neutral_folder = ['NEUTRALIZED_' + shards[-2]] #TODO: fix this path
-            suffix = [''] # shards[-3:]
+            prefix = shards[0:5]
+            neutral_folder = ['NEUTRALIZED_' + shards[5]]
+            suffix = shards[6:]
             full_neutralized_path = os.path.join("/".join(prefix + neutral_folder + suffix), 'neutralized_results.csv')
         else:
             full_neutralized_path = os.path.join("/".join(["/".join(self._output_dir.split("/")[0:-2]),
