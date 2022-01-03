@@ -57,6 +57,7 @@ class Atom:
             self.params = {'algo': {}, 'fit': {}, 'read': {}}
         else:
             self.params = params
+        logger.info(self.params)
 
         # Aux properties
         self.local_path = None
